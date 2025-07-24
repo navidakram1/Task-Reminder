@@ -151,48 +151,119 @@ export default function DashboardScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
+        <View style={styles.welcomeSection}>
+          <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
+          <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric'
+          })}</Text>
+        </View>
+
         <TouchableOpacity
-          style={styles.householdHeader}
+          style={styles.householdCard}
           onPress={() => router.push('/(app)/household/activity')}
         >
-          <Text style={styles.householdName}>{data.household.name}</Text>
-          <Text style={styles.activityHint}>Tap to see activity →</Text>
+          <View style={styles.householdInfo}>
+            <Text style={styles.householdName}>{data.household.name}</Text>
+            <Text style={styles.activityHint}>📋 View recent activity</Text>
+          </View>
+          <View style={styles.householdIcon}>
+            <Text style={styles.householdIconText}>→</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.quickActions}>
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => router.push('/(app)/tasks/create')}
-        >
-          <Text style={styles.quickActionIcon}>➕</Text>
-          <Text style={styles.quickActionText}>Add Task</Text>
-        </TouchableOpacity>
+      {/* Quick Actions Grid */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+        <View style={styles.quickActionsGrid}>
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.primaryAction]}
+            onPress={() => router.push('/(app)/tasks/create')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>📋</Text>
+            </View>
+            <Text style={styles.actionTitle}>Create Task</Text>
+            <Text style={styles.actionSubtitle}>Add new chore</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => router.push('/(app)/bills/create')}
-        >
-          <Text style={styles.quickActionIcon}>💰</Text>
-          <Text style={styles.quickActionText}>Add Bill</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.secondaryAction]}
+            onPress={() => router.push('/(app)/bills/create')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>💰</Text>
+            </View>
+            <Text style={styles.actionTitle}>Add Bill</Text>
+            <Text style={styles.actionSubtitle}>Split expense</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => router.push('/(app)/tasks/random-assignment')}
-        >
-          <Text style={styles.quickActionIcon}>🔄</Text>
-          <Text style={styles.quickActionText}>Shuffle</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.tertiaryAction]}
+            onPress={() => router.push('/(app)/tasks/random-assignment')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>🎲</Text>
+            </View>
+            <Text style={styles.actionTitle}>Shuffle Tasks</Text>
+            <Text style={styles.actionSubtitle}>Random assign</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => router.push('/(app)/household/members')}
-        >
-          <Text style={styles.quickActionIcon}>👥</Text>
-          <Text style={styles.quickActionText}>Members</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.quaternaryAction]}
+            onPress={() => router.push('/(app)/household/members')}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>👥</Text>
+            </View>
+            <Text style={styles.actionTitle}>Members</Text>
+            <Text style={styles.actionSubtitle}>Manage team</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Navigation Guide */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>💡 Getting Started</Text>
+        <View style={styles.guideContainer}>
+          <TouchableOpacity
+            style={styles.guideCard}
+            onPress={() => router.push('/(app)/tasks')}
+          >
+            <Text style={styles.guideIcon}>📋</Text>
+            <View style={styles.guideContent}>
+              <Text style={styles.guideTitle}>Manage Tasks</Text>
+              <Text style={styles.guideDescription}>View, create, and complete household chores</Text>
+            </View>
+            <Text style={styles.guideArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guideCard}
+            onPress={() => router.push('/(app)/bills')}
+          >
+            <Text style={styles.guideIcon}>💰</Text>
+            <View style={styles.guideContent}>
+              <Text style={styles.guideTitle}>Split Bills</Text>
+              <Text style={styles.guideDescription}>Add expenses and track who owes what</Text>
+            </View>
+            <Text style={styles.guideArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guideCard}
+            onPress={() => router.push('/(app)/approvals')}
+          >
+            <Text style={styles.guideIcon}>✅</Text>
+            <View style={styles.guideContent}>
+              <Text style={styles.guideTitle}>Approve Work</Text>
+              <Text style={styles.guideDescription}>Review and approve completed tasks</Text>
+            </View>
+            <Text style={styles.guideArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -358,28 +429,56 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
+  welcomeSection: {
+    marginBottom: 20,
+  },
   welcomeText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
-  },
-  householdHeader: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  householdName: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
+  dateText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  householdCard: {
+    backgroundColor: '#667eea',
+    padding: 20,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  householdInfo: {
+    flex: 1,
+  },
+  householdName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
   activityHint: {
     fontSize: 14,
-    color: '#667eea',
-    fontWeight: '500',
+    color: '#e8f0fe',
+  },
+  householdIcon: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  householdIconText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   quickActions: {
     flexDirection: 'row',
@@ -580,5 +679,106 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#667eea',
     fontWeight: '500',
+  },
+  // New Quick Actions Grid Styles
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickActionCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    alignItems: 'center',
+    flex: 1,
+    minWidth: '45%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 2,
+  },
+  primaryAction: {
+    borderColor: '#667eea',
+    backgroundColor: '#f8faff',
+  },
+  secondaryAction: {
+    borderColor: '#28a745',
+    backgroundColor: '#f8fff9',
+  },
+  tertiaryAction: {
+    borderColor: '#ffc107',
+    backgroundColor: '#fffef8',
+  },
+  quaternaryAction: {
+    borderColor: '#17a2b8',
+    backgroundColor: '#f8feff',
+  },
+  actionIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  actionIcon: {
+    fontSize: 24,
+  },
+  actionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  actionSubtitle: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  // Guide Section Styles
+  guideContainer: {
+    gap: 12,
+  },
+  guideCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  guideIcon: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  guideContent: {
+    flex: 1,
+  },
+  guideTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  guideDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  guideArrow: {
+    fontSize: 18,
+    color: '#667eea',
+    fontWeight: 'bold',
   },
 })

@@ -190,46 +190,103 @@ export default function SettingsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>⚙️ Settings</Text>
+          <Text style={styles.subtitle}>Manage your account and preferences</Text>
+        </View>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => router.push('/(app)/household/activity')}
+          >
+            <Text style={styles.quickActionIcon}>📋</Text>
+            <Text style={styles.quickActionText}>Activity</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => router.push('/(app)/household/members')}
+          >
+            <Text style={styles.quickActionIcon}>👥</Text>
+            <Text style={styles.quickActionText}>Members</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => router.push('/(onboarding)/invite-members')}
+          >
+            <Text style={styles.quickActionIcon}>📧</Text>
+            <Text style={styles.quickActionText}>Invite</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickActionButton}
+            onPress={() => router.push('/(app)/subscription/plans')}
+          >
+            <Text style={styles.quickActionIcon}>⭐</Text>
+            <Text style={styles.quickActionText}>Upgrade</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Profile Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👤 Profile</Text>
           
           <TouchableOpacity
-            style={styles.settingRow}
+            style={styles.profileCard}
             onPress={() => router.push('/(onboarding)/profile-setup')}
           >
-            <View style={styles.settingInfo}>
-              {profile?.photo_url && (
-                <Image source={{ uri: profile.photo_url }} style={styles.profilePhoto} />
+            <View style={styles.profileContainer}>
+              {profile?.photo_url ? (
+                <Image source={{ uri: profile.photo_url }} style={styles.profileImage} />
+              ) : (
+                <View style={styles.profilePlaceholder}>
+                  <Text style={styles.profilePlaceholderText}>
+                    {(profile?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
               )}
               <View style={styles.profileInfo}>
-                <Text style={styles.settingTitle}>
-                  {profile?.name || user?.email || 'Update Profile'}
+                <Text style={styles.profileName}>
+                  {profile?.name || 'Set your name'}
                 </Text>
-                <Text style={styles.settingSubtitle}>Edit name, photo, and preferences</Text>
+                <Text style={styles.profileEmail}>{user?.email}</Text>
+                <Text style={styles.profileHint}>Tap to edit profile</Text>
               </View>
             </View>
-            <Text style={styles.settingArrow}>›</Text>
+            <View style={styles.profileArrow}>
+              <Text style={styles.settingArrow}>›</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Household Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏠 Household</Text>
-          
+
           {household ? (
             <>
-              <View style={styles.settingRow}>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>{household.name}</Text>
-                  <Text style={styles.settingSubtitle}>
-                    Role: {household.userRole?.charAt(0).toUpperCase() + household.userRole?.slice(1)} • Code: {household.invite_code}
-                  </Text>
+              <View style={styles.householdCard}>
+                <View style={styles.householdHeader}>
+                  <View style={styles.householdIcon}>
+                    <Text style={styles.householdIconText}>🏠</Text>
+                  </View>
+                  <View style={styles.householdInfo}>
+                    <Text style={styles.householdName}>{household.name}</Text>
+                    <View style={styles.householdMeta}>
+                      <View style={styles.roleBadge}>
+                        <Text style={styles.roleText}>
+                          {household.userRole?.charAt(0).toUpperCase() + household.userRole?.slice(1)}
+                        </Text>
+                      </View>
+                      <Text style={styles.inviteCode}>Code: {household.invite_code}</Text>
+                    </View>
+                  </View>
                 </View>
               </View>
 
@@ -439,10 +496,18 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontWeight: '500',
   },
+  headerContent: {
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
   },
   placeholder: {
     width: 50,
@@ -507,5 +572,149 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 14,
     color: '#999',
+  },
+  // Quick Actions Styles
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 25,
+    paddingHorizontal: 5,
+  },
+  quickActionButton: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 5,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  quickActionIcon: {
+    fontSize: 20,
+    marginBottom: 6,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#333',
+  },
+  // Enhanced Profile Card Styles
+  profileCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  profileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+  },
+  profilePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  profilePlaceholderText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  profileHint: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '500',
+  },
+  profileArrow: {
+    marginLeft: 12,
+  },
+  // Enhanced Household Card Styles
+  householdCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    marginBottom: 16,
+  },
+  householdHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  householdIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  householdIconText: {
+    fontSize: 20,
+  },
+  householdName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  householdMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  roleBadge: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  inviteCode: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
 })

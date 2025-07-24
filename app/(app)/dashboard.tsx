@@ -36,6 +36,7 @@ export default function DashboardScreen() {
   const fetchDashboardData = async () => {
     if (!user) return
 
+    console.log('Starting fetchDashboardData...')
     try {
       // Fetch user's household
       const { data: householdMember } = await supabase
@@ -87,14 +88,28 @@ export default function DashboardScreen() {
         .order('created_at', { ascending: false })
         .limit(5)
 
+      console.log('About to setData with:', {
+        upcomingTasks: tasks?.length || 0,
+        pendingApprovals: approvals?.length || 0,
+        recentBills: bills?.length || 0,
+        household: householdData?.name || 'No household'
+      })
+
       setData({
         upcomingTasks: tasks || [],
         pendingApprovals: approvals || [],
         recentBills: bills || [],
         household: householdData,
       })
-    } catch (error) {
+
+      console.log('setData completed successfully')
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error)
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
     } finally {
       setLoading(false)
     }

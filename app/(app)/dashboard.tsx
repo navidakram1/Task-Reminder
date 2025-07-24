@@ -175,6 +175,16 @@ export default function DashboardScreen() {
           })}</Text>
         </View>
 
+        <HouseholdSwitcher
+          currentHousehold={data.household}
+          onHouseholdChange={(household) => {
+            // Update the data when household changes
+            setData(prev => ({ ...prev, household }))
+            // Refresh dashboard data for new household
+            fetchDashboardData()
+          }}
+        />
+
         <TouchableOpacity
           style={styles.householdCard}
           onPress={() => router.push('/(app)/household/activity')}
@@ -238,6 +248,9 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Feature Slider */}
+      <FeatureSlider />
 
       {/* Navigation Guide */}
       <View style={styles.section}>

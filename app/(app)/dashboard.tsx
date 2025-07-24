@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Alert,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 interface DashboardData {
   upcomingTasks: any[]
@@ -41,24 +40,29 @@ export default function DashboardScreen() {
       // Fetch user's household
       const { data: householdMember } = await supabase
         .from('household_members')
-        .select(`
-          household_id,
-          households (
-            id,
-            name,
-            invite_code
-          )
-        `)
+        .select('household_id')
         .eq('user_id', user.id)
         .single()
 
-      if (!householdMember?.households) {
+      if (!householdMember) {
         setLoading(false)
         return
       }
 
-      const household = householdMember.households
-      const householdId = household.id
+      // Fetch household details separately
+      const { data: householdData } = await supabase
+        .from('households')
+        .select('id, name, invite_code')
+        .eq('id', householdMember.household_id)
+        .single()
+
+      if (!householdData) {
+        setLoading(false)
+        return
+      }
+
+      setHousehold(householdData)
+      const householdId = householdData.id
 
       // Fetch upcoming tasks
       const { data: tasks } = await supabase
@@ -72,13 +76,7 @@ export default function DashboardScreen() {
       // Fetch pending approvals
       const { data: approvals } = await supabase
         .from('task_approvals')
-        .select(`
-          *,
-          tasks (
-            title,
-            description
-          )
-        `)
+        .select('*')
         .eq('status', 'pending')
         .limit(5)
 
@@ -200,7 +198,12 @@ export default function DashboardScreen() {
               onPress={() => router.push(`/(app)/tasks/${task.id}`)}
             >
               <View style={styles.taskInfo}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
+                <View style={styles.taskTitleRow}>
+                  {task.emoji && (
+                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                  )}
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                </View>
                 <Text style={styles.taskDescription}>{task.description}</Text>
               </View>
               <View style={styles.taskMeta}>
@@ -408,11 +411,20 @@ const styles = StyleSheet.create({
   taskInfo: {
     flex: 1,
   },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  taskEmoji: {
+    fontSize: 16,
+    marginRight: 6,
+  },
   taskTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 4,
+    flex: 1,
   },
   taskDescription: {
     fontSize: 14,

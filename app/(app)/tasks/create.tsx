@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Switch,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
 import { Picker } from '@react-native-picker/picker'
-import { supabase } from '../../../lib/supabase'
+import { router, useLocalSearchParams } from 'expo-router'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 export default function CreateEditTaskScreen() {
   const { edit } = useLocalSearchParams()
@@ -26,10 +26,19 @@ export default function CreateEditTaskScreen() {
   const [assigneeId, setAssigneeId] = useState('')
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none')
   const [randomAssignment, setRandomAssignment] = useState(false)
+  const [selectedEmoji, setSelectedEmoji] = useState('')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [householdMembers, setHouseholdMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [household, setHousehold] = useState<any>(null)
   const { user } = useAuth()
+
+  // Common task emojis
+  const taskEmojis = [
+    '📋', '✅', '🏠', '🧹', '🍽️', '🛒', '🧺', '🚿', '🛏️', '🌱',
+    '🔧', '💡', '📚', '💻', '🎯', '⚡', '🔥', '⭐', '🎉', '💪',
+    '🏃', '🎵', '🎨', '📝', '📞', '💰', '🎁', '🍳', '🧽', '🪴'
+  ]
 
   useEffect(() => {
     fetchHouseholdMembers()
@@ -94,6 +103,7 @@ export default function CreateEditTaskScreen() {
       setDueDate(data.due_date || '')
       setAssigneeId(data.assignee_id || '')
       setRecurrence(data.recurrence || 'none')
+      setSelectedEmoji(data.emoji || '')
     } catch (error) {
       console.error('Error fetching task details:', error)
       Alert.alert('Error', 'Failed to load task details')
@@ -119,6 +129,7 @@ export default function CreateEditTaskScreen() {
         due_date: dueDate || null,
         assignee_id: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
+        emoji: selectedEmoji || null,
         household_id: household.id,
         created_by: user?.id,
       }
@@ -184,14 +195,60 @@ export default function CreateEditTaskScreen() {
         <View style={styles.form}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Task Title *</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Enter task title"
-              autoCapitalize="sentences"
-            />
+            <View style={styles.titleInputContainer}>
+              <TouchableOpacity
+                style={styles.emojiButton}
+                onPress={() => setShowEmojiPicker(!showEmojiPicker)}
+              >
+                <Text style={styles.emojiButtonText}>
+                  {selectedEmoji || '😊'}
+                </Text>
+              </TouchableOpacity>
+              <TextInput
+                style={[styles.input, styles.titleInput]}
+                value={title}
+                onChangeText={setTitle}
+                placeholder="Enter task title"
+                autoCapitalize="sentences"
+              />
+            </View>
           </View>
+
+          {showEmojiPicker && (
+            <View style={styles.emojiPicker}>
+              <Text style={styles.emojiPickerTitle}>Choose an emoji (optional)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.emojiScrollView}
+              >
+                <TouchableOpacity
+                  style={[styles.emojiOption, !selectedEmoji && styles.selectedEmojiOption]}
+                  onPress={() => {
+                    setSelectedEmoji('')
+                    setShowEmojiPicker(false)
+                  }}
+                >
+                  <Text style={styles.emojiOptionText}>None</Text>
+                </TouchableOpacity>
+                {taskEmojis.map((emoji, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.emojiOption,
+                      selectedEmoji === emoji && styles.selectedEmojiOption
+                    ]}
+                    onPress={() => {
+                      setSelectedEmoji(emoji)
+                      setShowEmojiPicker(false)
+                    }}
+                  >
+                    <Text style={styles.emojiOptionEmoji}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Description</Text>
@@ -394,5 +451,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  titleInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emojiButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 12,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiButtonText: {
+    fontSize: 24,
+  },
+  titleInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  emojiPicker: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  emojiPickerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  emojiScrollView: {
+    flexDirection: 'row',
+  },
+  emojiOption: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    width: 50,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  selectedEmojiOption: {
+    borderColor: '#667eea',
+    backgroundColor: '#f0f8ff',
+  },
+  emojiOptionEmoji: {
+    fontSize: 24,
+  },
+  emojiOptionText: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
 })

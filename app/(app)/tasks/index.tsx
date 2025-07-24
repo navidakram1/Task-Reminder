@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TextInput,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 type FilterType = 'all' | 'assigned' | 'completed'
 
@@ -217,7 +217,12 @@ export default function TaskListScreen() {
               onPress={() => handleTaskPress(task.id)}
             >
               <View style={styles.taskHeader}>
-                <Text style={styles.taskTitle}>{task.title}</Text>
+                <View style={styles.taskTitleRow}>
+                  {task.emoji && (
+                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                  )}
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                </View>
                 <View
                   style={[
                     styles.statusBadge,
@@ -490,5 +495,13 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: '600',
+  },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskEmoji: {
+    fontSize: 18,
+    marginRight: 8,
   },
 })

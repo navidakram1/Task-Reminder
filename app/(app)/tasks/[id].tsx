@@ -290,7 +290,12 @@ export default function TaskDetailsScreen() {
 
       <View style={styles.content}>
         <View style={styles.titleSection}>
-          <Text style={styles.title}>{task.title}</Text>
+          <View style={styles.titleRow}>
+            {task.emoji && (
+              <Text style={styles.taskEmoji}>{task.emoji}</Text>
+            )}
+            <Text style={styles.title}>{task.title}</Text>
+          </View>
           <View
             style={[
               styles.statusBadge,
@@ -489,12 +494,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 20,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 15,
+  },
+  taskEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
     flex: 1,
-    marginRight: 15,
   },
   statusBadge: {
     paddingHorizontal: 12,

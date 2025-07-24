@@ -38,24 +38,46 @@ export default function DashboardScreen() {
 
     console.log('Starting fetchDashboardData...')
     try {
-      // Fetch user's household
-      const { data: householdMember } = await supabase
-        .from('household_members')
-        .select('household_id')
-        .eq('user_id', user.id)
-        .single()
+      // Try to get user's default household first
+      const { data: defaultHousehold } = await supabase.rpc('get_default_household')
 
-      if (!householdMember) {
-        setLoading(false)
-        return
+      let householdData = null
+      let userRole = 'member'
+
+      if (defaultHousehold && defaultHousehold.length > 0) {
+        // Use default household
+        const defaultHH = defaultHousehold[0]
+        householdData = {
+          id: defaultHH.household_id,
+          name: defaultHH.household_name,
+          invite_code: defaultHH.invite_code,
+        }
+        userRole = defaultHH.user_role
+      } else {
+        // Fallback to first household user is a member of
+        const { data: householdMember } = await supabase
+          .from('household_members')
+          .select(`
+            household_id,
+            role,
+            households (
+              id,
+              name,
+              invite_code
+            )
+          `)
+          .eq('user_id', user.id)
+          .limit(1)
+          .single()
+
+        if (!householdMember) {
+          setLoading(false)
+          return
+        }
+
+        householdData = householdMember.households
+        userRole = householdMember.role
       }
-
-      // Fetch household details separately
-      const { data: householdData } = await supabase
-        .from('households')
-        .select('id, name, invite_code')
-        .eq('id', householdMember.household_id)
-        .single()
 
       if (!householdData) {
         setLoading(false)
@@ -99,7 +121,10 @@ export default function DashboardScreen() {
         upcomingTasks: tasks || [],
         pendingApprovals: approvals || [],
         recentBills: bills || [],
-        household: householdData,
+        household: {
+          ...householdData,
+          userRole: userRole,
+        },
       })
 
       console.log('setData completed successfully')

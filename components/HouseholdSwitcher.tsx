@@ -19,6 +19,7 @@ interface Household {
   role: string
   member_count: number
   is_active: boolean
+  is_default: boolean
 }
 
 interface HouseholdSwitcherProps {
@@ -40,6 +41,13 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
     if (!user) return
 
     try {
+      // Get user's profile to check default household
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('default_household_id')
+        .eq('id', user.id)
+        .single()
+
       // Get all households user is a member of
       const { data: householdMembers, error } = await supabase
         .from('household_members')
@@ -70,6 +78,7 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
             role: member.role,
             member_count: count || 0,
             is_active: currentHousehold?.id === member.households.id,
+            is_default: profile?.default_household_id === member.households.id,
           }
         })
       )
@@ -122,6 +131,45 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
       Alert.alert('Error', 'Failed to switch household')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const setAsDefault = async (household: Household) => {
+    if (household.is_default) return
+
+    try {
+      // Call the database function to set default household
+      const { data, error } = await supabase.rpc('set_default_household', {
+        household_id: household.id
+      })
+
+      if (error) throw error
+
+      if (data) {
+        // Update local state
+        setHouseholds(prev => prev.map(h => ({
+          ...h,
+          is_default: h.id === household.id,
+          is_active: h.id === household.id
+        })))
+
+        // Notify parent component
+        if (onHouseholdChange) {
+          onHouseholdChange({
+            id: household.id,
+            name: household.name,
+            invite_code: household.invite_code,
+            userRole: household.role,
+          })
+        }
+
+        Alert.alert('Success', `${household.name} is now your default household`)
+      } else {
+        Alert.alert('Error', 'Failed to set default household')
+      }
+    } catch (error) {
+      console.error('Error setting default household:', error)
+      Alert.alert('Error', 'Failed to set default household')
     }
   }
 
@@ -186,11 +234,18 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
                 <View style={styles.householdInfo}>
                   <View style={styles.householdHeader}>
                     <Text style={styles.householdName}>{household.name}</Text>
-                    {household.is_active && (
-                      <View style={styles.activeBadge}>
-                        <Text style={styles.activeBadgeText}>Active</Text>
-                      </View>
-                    )}
+                    <View style={styles.badgeContainer}>
+                      {household.is_default && (
+                        <View style={styles.defaultBadge}>
+                          <Text style={styles.defaultBadgeText}>Default</Text>
+                        </View>
+                      )}
+                      {household.is_active && (
+                        <View style={styles.activeBadge}>
+                          <Text style={styles.activeBadgeText}>Active</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                   
                   <View style={styles.householdMeta}>
@@ -213,9 +268,27 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
                   </View>
                 </View>
 
-                {!household.is_active && (
-                  <Text style={styles.switchText}>Switch</Text>
-                )}
+                <View style={styles.householdActions}>
+                  {!household.is_active && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => switchHousehold(household)}
+                    >
+                      <Text style={styles.actionButtonText}>Switch</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {!household.is_default && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.defaultButton]}
+                      onPress={() => setAsDefault(household)}
+                    >
+                      <Text style={[styles.actionButtonText, styles.defaultButtonText]}>
+                        Set Default
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
 
@@ -321,13 +394,29 @@ const styles = StyleSheet.create({
   householdHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
   householdName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginRight: 12,
+    flex: 1,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  defaultBadge: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#fff',
   },
   activeBadge: {
     backgroundColor: '#28a745',
@@ -363,10 +452,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  switchText: {
-    fontSize: 14,
+  householdActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  actionButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  actionButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  defaultButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#667eea',
+  },
+  defaultButtonText: {
     color: '#667eea',
-    fontWeight: '500',
   },
   createHouseholdButton: {
     backgroundColor: '#f8f9fa',

@@ -300,6 +300,17 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => router.push('/(app)/settings/default-household')}
+              >
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Default Household</Text>
+                  <Text style={styles.settingSubtitle}>Choose which household loads on startup</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
+
               {(household.userRole === 'admin' || household.userRole === 'captain') && (
                 <TouchableOpacity
                   style={styles.settingRow}

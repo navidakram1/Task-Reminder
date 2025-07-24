@@ -1,0 +1,494 @@
+import React, { useState, useEffect } from 'react'
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  Alert,
+  Image,
+} from 'react-native'
+import { router } from 'expo-router'
+import { supabase } from '../../../lib/supabase'
+import { useAuth } from '../../../contexts/AuthContext'
+
+export default function SettingsScreen() {
+  const [profile, setProfile] = useState<any>(null)
+  const [household, setHousehold] = useState<any>(null)
+  const [subscription, setSubscription] = useState<any>(null)
+  const [notifications, setNotifications] = useState({
+    email: true,
+    push: true,
+    taskReminders: true,
+    billAlerts: true,
+  })
+  const [loading, setLoading] = useState(true)
+  const { user, signOut } = useAuth()
+
+  useEffect(() => {
+    fetchUserData()
+  }, [])
+
+  const fetchUserData = async () => {
+    if (!user) return
+
+    try {
+      // Fetch user profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setProfile(profileData)
+
+      if (profileData?.notification_preferences) {
+        setNotifications(profileData.notification_preferences)
+      }
+
+      // Fetch household info
+      const { data: householdMember } = await supabase
+        .from('household_members')
+        .select(`
+          role,
+          households (
+            id,
+            name,
+            invite_code,
+            admin_id
+          )
+        `)
+        .eq('user_id', user.id)
+        .single()
+
+      if (householdMember) {
+        setHousehold({
+          ...householdMember.households,
+          userRole: householdMember.role,
+        })
+      }
+
+      // Fetch subscription
+      const { data: subscriptionData } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      setSubscription(subscriptionData)
+    } catch (error) {
+      console.error('Error fetching user data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateNotificationPreferences = async (newPreferences: any) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user?.id,
+          notification_preferences: newPreferences,
+          updated_at: new Date().toISOString(),
+        })
+
+      if (error) throw error
+      setNotifications(newPreferences)
+    } catch (error) {
+      console.error('Error updating preferences:', error)
+      Alert.alert('Error', 'Failed to update notification preferences')
+    }
+  }
+
+  const handleNotificationToggle = (key: string, value: boolean) => {
+    const newPreferences = { ...notifications, [key]: value }
+    updateNotificationPreferences(newPreferences)
+  }
+
+  const handleLeaveHousehold = () => {
+    Alert.alert(
+      'Leave Household',
+      `Are you sure you want to leave "${household?.name}"? You will lose access to all shared tasks and bills.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('household_members')
+                .delete()
+                .eq('user_id', user?.id)
+                .eq('household_id', household?.id)
+
+              if (error) throw error
+
+              Alert.alert('Left Household', 'You have left the household successfully')
+              setHousehold(null)
+            } catch (error) {
+              console.error('Error leaving household:', error)
+              Alert.alert('Error', 'Failed to leave household')
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut()
+              router.replace('/(auth)/landing')
+            } catch (error) {
+              console.error('Error signing out:', error)
+              Alert.alert('Error', 'Failed to sign out')
+            }
+          },
+        },
+      ]
+    )
+  }
+
+  const getSubscriptionStatus = () => {
+    if (!subscription) return 'Free'
+    
+    if (subscription.plan === 'lifetime') return 'Lifetime'
+    if (subscription.plan === 'monthly') {
+      const expiresAt = new Date(subscription.expires_at)
+      const now = new Date()
+      return expiresAt > now ? 'Monthly (Active)' : 'Monthly (Expired)'
+    }
+    
+    return subscription.plan
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Loading settings...</Text>
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Settings</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Profile Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👤 Profile</Text>
+          
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => router.push('/(onboarding)/profile-setup')}
+          >
+            <View style={styles.settingInfo}>
+              {profile?.photo_url && (
+                <Image source={{ uri: profile.photo_url }} style={styles.profilePhoto} />
+              )}
+              <View style={styles.profileInfo}>
+                <Text style={styles.settingTitle}>
+                  {profile?.name || user?.email || 'Update Profile'}
+                </Text>
+                <Text style={styles.settingSubtitle}>Edit name, photo, and preferences</Text>
+              </View>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Household Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏠 Household</Text>
+          
+          {household ? (
+            <>
+              <View style={styles.settingRow}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>{household.name}</Text>
+                  <Text style={styles.settingSubtitle}>
+                    Role: {household.userRole} • Code: {household.invite_code}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => router.push('/(onboarding)/invite-members')}
+              >
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Invite Members</Text>
+                  <Text style={styles.settingSubtitle}>Add more people to your household</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.settingRow} onPress={handleLeaveHousehold}>
+                <View style={styles.settingInfo}>
+                  <Text style={[styles.settingTitle, styles.dangerText]}>Leave Household</Text>
+                  <Text style={styles.settingSubtitle}>Remove yourself from this household</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => router.push('/(onboarding)/create-join-household')}
+            >
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Join or Create Household</Text>
+                <Text style={styles.settingSubtitle}>Get started with shared tasks and bills</Text>
+              </View>
+              <Text style={styles.settingArrow}>›</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Notifications Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🔔 Notifications</Text>
+          
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Email Notifications</Text>
+              <Text style={styles.settingSubtitle}>Receive updates via email</Text>
+            </View>
+            <Switch
+              value={notifications.email}
+              onValueChange={(value) => handleNotificationToggle('email', value)}
+              trackColor={{ false: '#ddd', true: '#667eea' }}
+              thumbColor={notifications.email ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Push Notifications</Text>
+              <Text style={styles.settingSubtitle}>Get instant alerts on your device</Text>
+            </View>
+            <Switch
+              value={notifications.push}
+              onValueChange={(value) => handleNotificationToggle('push', value)}
+              trackColor={{ false: '#ddd', true: '#667eea' }}
+              thumbColor={notifications.push ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Task Reminders</Text>
+              <Text style={styles.settingSubtitle}>Reminders for due tasks</Text>
+            </View>
+            <Switch
+              value={notifications.taskReminders}
+              onValueChange={(value) => handleNotificationToggle('taskReminders', value)}
+              trackColor={{ false: '#ddd', true: '#667eea' }}
+              thumbColor={notifications.taskReminders ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Bill Alerts</Text>
+              <Text style={styles.settingSubtitle}>Notifications for bill payments</Text>
+            </View>
+            <Switch
+              value={notifications.billAlerts}
+              onValueChange={(value) => handleNotificationToggle('billAlerts', value)}
+              trackColor={{ false: '#ddd', true: '#667eea' }}
+              thumbColor={notifications.billAlerts ? '#fff' : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
+        {/* Subscription Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💎 Subscription</Text>
+          
+          <TouchableOpacity
+            style={styles.settingRow}
+            onPress={() => router.push('/(app)/subscription/plans')}
+          >
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Current Plan</Text>
+              <Text style={styles.settingSubtitle}>{getSubscriptionStatus()}</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Support Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>❓ Support</Text>
+          
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Help & FAQ</Text>
+              <Text style={styles.settingSubtitle}>Get answers to common questions</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Contact Support</Text>
+              <Text style={styles.settingSubtitle}>Get help from our team</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Privacy Policy</Text>
+              <Text style={styles.settingSubtitle}>How we protect your data</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingTitle}>Terms of Service</Text>
+              <Text style={styles.settingSubtitle}>Our terms and conditions</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign Out Section */}
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.settingRow} onPress={handleSignOut}>
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingTitle, styles.dangerText]}>Sign Out</Text>
+              <Text style={styles.settingSubtitle}>Sign out of your account</Text>
+            </View>
+            <Text style={styles.settingArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.versionSection}>
+          <Text style={styles.versionText}>HomeTask v1.0.0</Text>
+        </View>
+      </ScrollView>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  backText: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '500',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  placeholder: {
+    width: 50,
+  },
+  content: {
+    flex: 1,
+  },
+  section: {
+    marginBottom: 25,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  settingInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  profilePhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 2,
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  settingArrow: {
+    fontSize: 18,
+    color: '#ccc',
+    marginLeft: 10,
+  },
+  dangerText: {
+    color: '#dc3545',
+  },
+  versionSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  versionText: {
+    fontSize: 14,
+    color: '#999',
+  },
+})

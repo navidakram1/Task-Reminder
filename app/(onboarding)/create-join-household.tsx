@@ -19,6 +19,7 @@ export default function CreateJoinHouseholdScreen() {
   const [householdName, setHouseholdName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'member' | 'captain'>('member')
   const { user } = useAuth()
 
   const generateInviteCode = () => {
@@ -167,7 +168,7 @@ export default function CreateJoinHouseholdScreen() {
         .insert({
           household_id: household.id,
           user_id: user.id,
-          role: 'member',
+          role: selectedRole,
         })
 
       if (memberError) {
@@ -270,6 +271,51 @@ export default function CreateJoinHouseholdScreen() {
                   autoCapitalize="characters"
                   maxLength={6}
                 />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Join as</Text>
+                <View style={styles.roleSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOption,
+                      selectedRole === 'member' && styles.selectedRole,
+                    ]}
+                    onPress={() => setSelectedRole('member')}
+                  >
+                    <Text
+                      style={[
+                        styles.roleOptionText,
+                        selectedRole === 'member' && styles.selectedRoleText,
+                      ]}
+                    >
+                      👤 Member
+                    </Text>
+                    <Text style={styles.roleDescription}>
+                      Basic access to tasks and bills
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.roleOption,
+                      selectedRole === 'captain' && styles.selectedRole,
+                    ]}
+                    onPress={() => setSelectedRole('captain')}
+                  >
+                    <Text
+                      style={[
+                        styles.roleOptionText,
+                        selectedRole === 'captain' && styles.selectedRoleText,
+                      ]}
+                    >
+                      ⭐ Captain
+                    </Text>
+                    <Text style={styles.roleDescription}>
+                      Can help manage tasks and approve completions
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.infoBox}>
@@ -415,5 +461,33 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     fontWeight: '500',
+  },
+  roleSelector: {
+    gap: 12,
+  },
+  roleOption: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+  },
+  selectedRole: {
+    borderColor: '#667eea',
+    backgroundColor: '#f0f8ff',
+  },
+  roleOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  selectedRoleText: {
+    color: '#667eea',
+  },
+  roleDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
   },
 })

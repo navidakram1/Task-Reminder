@@ -228,7 +228,7 @@ export default function SettingsScreen() {
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingTitle}>{household.name}</Text>
                   <Text style={styles.settingSubtitle}>
-                    Role: {household.userRole} • Code: {household.invite_code}
+                    Role: {household.userRole?.charAt(0).toUpperCase() + household.userRole?.slice(1)} • Code: {household.invite_code}
                   </Text>
                 </View>
               </View>

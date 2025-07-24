@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  RefreshControl,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 export default function HouseholdMembersScreen() {
   const [members, setMembers] = useState<any[]>([])
@@ -125,36 +125,43 @@ export default function HouseholdMembersScreen() {
     )
   }
 
-  const handleMakeAdmin = async (memberId: string, memberName: string) => {
+  const handleChangeRole = async (memberId: string, memberName: string, currentRole: string) => {
     if (!household || household.userRole !== 'admin') {
-      Alert.alert('Error', 'Only admins can promote members')
+      Alert.alert('Error', 'Only admins can change member roles')
       return
     }
 
+    const roleOptions = [
+      { label: 'Cancel', value: null, style: 'cancel' },
+      { label: 'Make Member', value: 'member' },
+      { label: 'Make Captain', value: 'captain' },
+      { label: 'Make Admin', value: 'admin' },
+    ].filter(option => option.value !== currentRole && option.value !== null)
+
     Alert.alert(
-      'Make Admin',
-      `Make ${memberName} an admin of this household?`,
+      'Change Role',
+      `Change ${memberName}'s role from ${currentRole}?`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Make Admin',
+        ...roleOptions.map(option => ({
+          text: option.label,
           onPress: async () => {
             try {
               const { error } = await supabase
                 .from('household_members')
-                .update({ role: 'admin' })
+                .update({ role: option.value })
                 .eq('id', memberId)
 
               if (error) throw error
 
-              Alert.alert('Success', `${memberName} is now an admin`)
+              Alert.alert('Success', `${memberName} is now a ${option.value}`)
               await fetchHouseholdMembers()
             } catch (error) {
               console.error('Error updating member role:', error)
               Alert.alert('Error', 'Failed to update member role')
             }
           },
-        },
+        })),
       ]
     )
   }
@@ -234,13 +241,15 @@ export default function HouseholdMembersScreen() {
                   <View
                     style={[
                       styles.roleBadge,
-                      member.role === 'admin' ? styles.adminBadge : styles.memberBadge,
+                      member.role === 'admin' && styles.adminBadge,
+                      member.role === 'captain' && styles.captainBadge,
+                      member.role === 'member' && styles.memberBadge,
                     ]}
                   >
                     <Text
                       style={[
                         styles.roleText,
-                        member.role === 'admin' ? styles.adminText : styles.memberText,
+                        (member.role === 'admin' || member.role === 'captain' || member.role === 'member') && styles.roleTextWhite,
                       ]}
                     >
                       {member.role}
@@ -251,15 +260,13 @@ export default function HouseholdMembersScreen() {
 
               {household.userRole === 'admin' && member.user_id !== user?.id && (
                 <View style={styles.memberActions}>
-                  {member.role === 'member' && (
-                    <TouchableOpacity
-                      style={styles.actionButton}
-                      onPress={() => handleMakeAdmin(member.id, member.profiles?.name)}
-                    >
-                      <Text style={styles.actionButtonText}>Make Admin</Text>
-                    </TouchableOpacity>
-                  )}
-                  
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleChangeRole(member.id, member.profiles?.name, member.role)}
+                  >
+                    <Text style={styles.actionButtonText}>Change Role</Text>
+                  </TouchableOpacity>
+
                   <TouchableOpacity
                     style={[styles.actionButton, styles.removeButton]}
                     onPress={() => handleRemoveMember(member.id, member.profiles?.name)}
@@ -424,6 +431,9 @@ const styles = StyleSheet.create({
   adminBadge: {
     backgroundColor: '#667eea',
   },
+  captainBadge: {
+    backgroundColor: '#ffc107',
+  },
   memberBadge: {
     backgroundColor: '#28a745',
   },
@@ -432,10 +442,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'capitalize',
   },
-  adminText: {
-    color: '#fff',
-  },
-  memberText: {
+  roleTextWhite: {
     color: '#fff',
   },
   memberActions: {

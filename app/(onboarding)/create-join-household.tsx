@@ -1,18 +1,18 @@
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../lib/supabase'
+import { useState } from 'react'
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function CreateJoinHouseholdScreen() {
   const [mode, setMode] = useState<'create' | 'join'>('create')
@@ -38,8 +38,37 @@ export default function CreateJoinHouseholdScreen() {
 
     setLoading(true)
     try {
+      console.log('Creating household for user:', user.id)
+
+      // Ensure user profile exists
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      console.log('User profile check:', { profileData, profileError })
+
+      // Create profile if it doesn't exist
+      if (profileError && profileError.code === 'PGRST116') {
+        console.log('Creating user profile...')
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            name: user.email?.split('@')[0] || 'User',
+          })
+
+        if (createProfileError) {
+          console.error('Profile creation error:', createProfileError)
+          throw new Error('Failed to create user profile')
+        }
+      }
+
       const code = generateInviteCode()
-      
+      console.log('Generated invite code:', code)
+
       // Create household
       const { data: household, error: householdError } = await supabase
         .from('households')
@@ -51,7 +80,10 @@ export default function CreateJoinHouseholdScreen() {
         .select()
         .single()
 
+      console.log('Household creation result:', { household, householdError })
+
       if (householdError) {
+        console.error('Household creation error:', householdError)
         throw householdError
       }
 
@@ -64,7 +96,10 @@ export default function CreateJoinHouseholdScreen() {
           role: 'admin',
         })
 
+      console.log('Member creation result:', { memberError })
+
       if (memberError) {
+        console.error('Member creation error:', memberError)
         throw memberError
       }
 
@@ -79,7 +114,9 @@ export default function CreateJoinHouseholdScreen() {
         ]
       )
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create household')
+      console.error('Full error object:', error)
+      const errorMessage = error.message || error.details || error.hint || 'Failed to create household'
+      Alert.alert('Error', `Failed to create household: ${errorMessage}`)
     } finally {
       setLoading(false)
     }

@@ -28,16 +28,27 @@ interface HouseholdSwitcherProps {
 }
 
 export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange }: HouseholdSwitcherProps) {
-  const [households, setHouseholds] = useState<Household[]>([])
-  const [showModal, setShowModal] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const { user } = useAuth()
+  // Simplified version for debugging
+  if (!currentHousehold) {
+    return null
+  }
 
-  useEffect(() => {
-    fetchUserHouseholds()
-  }, [])
+  return (
+    <View style={styles.switcherButton}>
+      <View style={styles.switcherContent}>
+        <Text style={styles.switcherText}>
+          {currentHousehold?.name || 'Select Household'}
+        </Text>
+        <Text style={styles.switcherHint}>
+          Tap to switch households
+        </Text>
+      </View>
+      <Text style={styles.switcherArrow}>⌄</Text>
+    </View>
+  )
+}
 
-  const fetchUserHouseholds = async () => {
+const styles = StyleSheet.create({
     if (!user) return
 
     try {

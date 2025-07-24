@@ -61,7 +61,6 @@ export default function DashboardScreen() {
         return
       }
 
-      setHousehold(householdData)
       const householdId = householdData.id
 
       // Fetch upcoming tasks
@@ -92,7 +91,7 @@ export default function DashboardScreen() {
         upcomingTasks: tasks || [],
         pendingApprovals: approvals || [],
         recentBills: bills || [],
-        household,
+        household: householdData,
       })
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -152,8 +151,14 @@ export default function DashboardScreen() {
       }
     >
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Welcome back!</Text>
-        <Text style={styles.householdName}>{data.household.name}</Text>
+        <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
+        <TouchableOpacity
+          style={styles.householdHeader}
+          onPress={() => router.push('/(app)/household/activity')}
+        >
+          <Text style={styles.householdName}>{data.household.name}</Text>
+          <Text style={styles.activityHint}>Tap to see activity →</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.quickActions}>
@@ -179,6 +184,14 @@ export default function DashboardScreen() {
         >
           <Text style={styles.quickActionIcon}>🔄</Text>
           <Text style={styles.quickActionText}>Shuffle</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionButton}
+          onPress={() => router.push('/(app)/household/members')}
+        >
+          <Text style={styles.quickActionIcon}>👥</Text>
+          <Text style={styles.quickActionText}>Members</Text>
         </TouchableOpacity>
       </View>
 
@@ -348,12 +361,25 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 16,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  householdHeader: {
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   householdName: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 4,
+  },
+  activityHint: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '500',
   },
   quickActions: {
     flexDirection: 'row',

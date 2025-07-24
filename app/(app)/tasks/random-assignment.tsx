@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  ActivityIndicator,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 interface TaskAssignment {
   task: any
@@ -25,6 +25,7 @@ export default function RandomTaskAssignmentScreen() {
   const [loading, setLoading] = useState(true)
   const [shuffling, setShuffling] = useState(false)
   const [confirming, setConfirming] = useState(false)
+  const [userRole, setUserRole] = useState<string>('')
   const { user } = useAuth()
 
   useEffect(() => {
@@ -35,14 +36,24 @@ export default function RandomTaskAssignmentScreen() {
     if (!user) return
 
     try {
-      // Get user's household
+      // Get user's household and role
       const { data: householdMember } = await supabase
         .from('household_members')
-        .select('household_id')
+        .select('household_id, role')
         .eq('user_id', user.id)
         .single()
 
       if (!householdMember) return
+
+      setUserRole(householdMember.role)
+
+      // Check if user has permission to shuffle tasks
+      if (householdMember.role !== 'admin' && householdMember.role !== 'captain') {
+        Alert.alert('Permission Denied', 'Only admins and captains can shuffle tasks', [
+          { text: 'OK', onPress: () => router.back() }
+        ])
+        return
+      }
 
       // Fetch unassigned tasks
       const { data: tasks } = await supabase

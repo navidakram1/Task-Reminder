@@ -233,16 +233,22 @@ export default function SettingsScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.settingRow}
-                onPress={() => router.push('/(app)/household/members')}
-              >
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>Manage Members</Text>
-                  <Text style={styles.settingSubtitle}>View and manage household members</Text>
-                </View>
-                <Text style={styles.settingArrow}>›</Text>
-              </TouchableOpacity>
+              {(household.userRole === 'admin' || household.userRole === 'captain') && (
+                <TouchableOpacity
+                  style={styles.settingRow}
+                  onPress={() => router.push('/(app)/household/members')}
+                >
+                  <View style={styles.settingInfo}>
+                    <Text style={styles.settingTitle}>Manage Members</Text>
+                    <Text style={styles.settingSubtitle}>
+                      {household.userRole === 'admin'
+                        ? 'View and manage household members'
+                        : 'View and manage members (except admins)'}
+                    </Text>
+                  </View>
+                  <Text style={styles.settingArrow}>›</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.settingRow}

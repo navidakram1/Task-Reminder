@@ -90,9 +90,15 @@ export default function HouseholdMembersScreen() {
     setRefreshing(false)
   }
 
-  const handleRemoveMember = async (memberId: string, memberName: string) => {
-    if (!household || household.userRole !== 'admin') {
-      Alert.alert('Error', 'Only admins can remove members')
+  const handleRemoveMember = async (memberId: string, memberName: string, memberRole: string) => {
+    if (!household || (household.userRole !== 'admin' && household.userRole !== 'captain')) {
+      Alert.alert('Error', 'Only admins and captains can remove members')
+      return
+    }
+
+    // Captains cannot remove admins
+    if (household.userRole === 'captain' && memberRole === 'admin') {
+      Alert.alert('Error', 'Captains cannot remove admins')
       return
     }
 
@@ -126,17 +132,28 @@ export default function HouseholdMembersScreen() {
   }
 
   const handleChangeRole = async (memberId: string, memberName: string, currentRole: string) => {
-    if (!household || household.userRole !== 'admin') {
-      Alert.alert('Error', 'Only admins can change member roles')
+    if (!household || (household.userRole !== 'admin' && household.userRole !== 'captain')) {
+      Alert.alert('Error', 'Only admins and captains can change member roles')
       return
     }
 
-    const roleOptions = [
+    // Captains cannot change admin roles or promote to admin
+    if (household.userRole === 'captain' && (currentRole === 'admin')) {
+      Alert.alert('Error', 'Captains cannot change admin roles')
+      return
+    }
+
+    let roleOptions = [
       { label: 'Cancel', value: null, style: 'cancel' },
       { label: 'Make Member', value: 'member' },
       { label: 'Make Captain', value: 'captain' },
       { label: 'Make Admin', value: 'admin' },
     ].filter(option => option.value !== currentRole && option.value !== null)
+
+    // Captains cannot promote to admin
+    if (household.userRole === 'captain') {
+      roleOptions = roleOptions.filter(option => option.value !== 'admin')
+    }
 
     Alert.alert(
       'Change Role',
@@ -258,23 +275,29 @@ export default function HouseholdMembersScreen() {
                 </View>
               </View>
 
-              {household.userRole === 'admin' && member.user_id !== user?.id && (
+              {(household.userRole === 'admin' || household.userRole === 'captain') && member.user_id !== user?.id && (
                 <View style={styles.memberActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={() => handleChangeRole(member.id, member.profiles?.name, member.role)}
-                  >
-                    <Text style={styles.actionButtonText}>Change Role</Text>
-                  </TouchableOpacity>
+                  {/* Show change role button if user can change this member's role */}
+                  {(household.userRole === 'admin' || (household.userRole === 'captain' && member.role !== 'admin')) && (
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => handleChangeRole(member.id, member.profiles?.name, member.role)}
+                    >
+                      <Text style={styles.actionButtonText}>Change Role</Text>
+                    </TouchableOpacity>
+                  )}
 
-                  <TouchableOpacity
-                    style={[styles.actionButton, styles.removeButton]}
-                    onPress={() => handleRemoveMember(member.id, member.profiles?.name)}
-                  >
-                    <Text style={[styles.actionButtonText, styles.removeButtonText]}>
-                      Remove
-                    </Text>
-                  </TouchableOpacity>
+                  {/* Show remove button if user can remove this member */}
+                  {(household.userRole === 'admin' || (household.userRole === 'captain' && member.role !== 'admin')) && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.removeButton]}
+                      onPress={() => handleRemoveMember(member.id, member.profiles?.name, member.role)}
+                    >
+                      <Text style={[styles.actionButtonText, styles.removeButtonText]}>
+                        Remove
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             </View>

@@ -1,13 +1,21 @@
-import 'react-native-url-polyfill/auto'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
+import 'react-native-url-polyfill/auto';
+
+let storage;
+if (Platform.OS === 'web') {
+  storage = undefined; // Supabase will use localStorage by default on web
+} else {
+  // Only import AsyncStorage on native
+  storage = require('@react-native-async-storage/async-storage').default;
+}
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ftjhtxlpjchrobftmnei.supabase.co'
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0amh0eGxwamNocm9iZnRtbmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODg3NTUsImV4cCI6MjA2ODk2NDc1NX0.nJQUFU7sPIUHRgUsd7Ij9wngew1WraNnPgPCULIO1Y4'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

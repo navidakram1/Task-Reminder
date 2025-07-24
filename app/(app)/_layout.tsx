@@ -73,6 +73,12 @@ export default function AppLayout() {
           href: null, // Hide from tab bar
         }}
       />
+      <Tabs.Screen
+        name="household"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
     </Tabs>
   )
 }

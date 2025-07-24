@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Switch,
-  Alert,
-  Image,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<any>(null)
@@ -232,6 +232,17 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </View>
+
+              <TouchableOpacity
+                style={styles.settingRow}
+                onPress={() => router.push('/(app)/household/members')}
+              >
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>Manage Members</Text>
+                  <Text style={styles.settingSubtitle}>View and manage household members</Text>
+                </View>
+                <Text style={styles.settingArrow}>›</Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.settingRow}

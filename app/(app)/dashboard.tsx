@@ -364,6 +364,18 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.tertiaryAction]}
+            onPress={() => router.push('/(app)/bills')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>📊</Text>
+            </View>
+            <Text style={styles.actionTitle}>View Bills</Text>
+            <Text style={styles.actionSubtitle}>Manage expenses</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.tertiaryAction]}
             onPress={() => router.push('/(app)/household/transfer-requests')}
             activeOpacity={0.8}
           >
@@ -458,6 +470,23 @@ export default function DashboardScreen() {
             <View style={styles.guideContent}>
               <Text style={styles.guideTitle}>Split Bills</Text>
               <Text style={styles.guideDescription}>Add expenses and track who owes what</Text>
+            </View>
+            <View style={styles.guideArrowContainer}>
+              <Text style={styles.guideArrow}>→</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guideCard}
+            onPress={() => router.push('/(app)/bills')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.guideIconContainer}>
+              <Text style={styles.guideIcon}>💰</Text>
+            </View>
+            <View style={styles.guideContent}>
+              <Text style={styles.guideTitle}>Bills & Expenses</Text>
+              <Text style={styles.guideDescription}>Split bills, track payments, and manage household expenses</Text>
             </View>
             <View style={styles.guideArrowContainer}>
               <Text style={styles.guideArrow}>→</Text>

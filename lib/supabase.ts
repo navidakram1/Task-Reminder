@@ -1,16 +1,47 @@
-import 'react-native-url-polyfill/auto'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient } from '@supabase/supabase-js'
+import { Platform } from 'react-native'
+import 'react-native-url-polyfill/auto'
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ftjhtxlpjchrobftmnei.supabase.co'
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0amh0eGxwamNocm9iZnRtbmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODg3NTUsImV4cCI6MjA2ODk2NDc1NX0.nJQUFU7sPIUHRgUsd7Ij9wngew1WraNnPgPCULIO1Y4'
 
+// Web-compatible storage
+const isWeb = typeof window !== 'undefined' && Platform.OS === 'web'
+
+const storage = isWeb ? {
+  getItem: (key: string) => {
+    try {
+      return Promise.resolve(window.localStorage.getItem(key))
+    } catch {
+      return Promise.resolve(null)
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      window.localStorage.setItem(key, value)
+      return Promise.resolve()
+    } catch {
+      return Promise.resolve()
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      window.localStorage.removeItem(key)
+      return Promise.resolve()
+    } catch {
+      return Promise.resolve()
+    }
+  },
+} : AsyncStorage
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    storage: storage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: isWeb,
+    flowType: isWeb ? 'pkce' : 'implicit',
   },
 })
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
 import {
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -42,6 +42,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
     marginBottom: 20,
+    // Web-compatible shadow
+    ...Platform.select({
+      web: {
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
+        elevation: 2,
+      },
+    }),
   },
   switcherContent: {
     flex: 1,

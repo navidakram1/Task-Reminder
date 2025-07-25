@@ -9,17 +9,19 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native'
+import { router } from 'expo-router'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
 interface Household {
-  id: string
-  name: string
+  household_id: string
+  household_name: string
+  household_type: string
+  user_role: string
   invite_code: string
-  role: string
   member_count: number
   is_active: boolean
-  is_default: boolean
+  joined_at: string
 }
 
 interface HouseholdSwitcherProps {
@@ -28,75 +30,34 @@ interface HouseholdSwitcherProps {
 }
 
 export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange }: HouseholdSwitcherProps) {
-  // Simplified version for debugging
-  if (!currentHousehold) {
-    return null
-  }
+  const [households, setHouseholds] = useState<Household[]>([])
+  const [showModal, setShowModal] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [switching, setSwitching] = useState(false)
+  const { user } = useAuth()
 
-  return (
-    <View style={styles.switcherButton}>
-      <View style={styles.switcherContent}>
-        <Text style={styles.switcherText}>
-          {currentHousehold?.name || 'Select Household'}
-        </Text>
-        <Text style={styles.switcherHint}>
-          Tap to switch households
-        </Text>
-      </View>
-      <Text style={styles.switcherArrow}>⌄</Text>
-    </View>
-  )
-}
+  useEffect(() => {
+    if (user) {
+      fetchHouseholds()
+    }
+  }, [user])
 
-const styles = StyleSheet.create({
+  const fetchHouseholds = async () => {
     if (!user) return
 
+    setLoading(true)
     try {
-      // Get user's profile to check default household
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('default_household_id')
-        .eq('id', user.id)
-        .single()
-
-      // Get all households user is a member of
-      const { data: householdMembers, error } = await supabase
-        .from('household_members')
-        .select(`
-          role,
-          households (
-            id,
-            name,
-            invite_code
-          )
-        `)
-        .eq('user_id', user.id)
+      const { data, error } = await supabase
+        .rpc('get_user_households', {
+          p_user_id: user.id
+        })
 
       if (error) throw error
-
-      // Get member counts for each household
-      const householdsWithCounts = await Promise.all(
-        (householdMembers || []).map(async (member: any) => {
-          const { count } = await supabase
-            .from('household_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('household_id', member.households.id)
-
-          return {
-            id: member.households.id,
-            name: member.households.name,
-            invite_code: member.households.invite_code,
-            role: member.role,
-            member_count: count || 0,
-            is_active: currentHousehold?.id === member.households.id,
-            is_default: profile?.default_household_id === member.households.id,
-          }
-        })
-      )
-
-      setHouseholds(householdsWithCounts)
+      setHouseholds(data || [])
     } catch (error) {
       console.error('Error fetching households:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -106,29 +67,238 @@ const styles = StyleSheet.create({
       return
     }
 
-    setLoading(true)
+    setSwitching(true)
     try {
-      // Call the database function to switch active household
-      const { data, error } = await supabase.rpc('switch_active_household', {
-        new_household_id: household.id
-      })
+      const { data, error } = await supabase
+        .rpc('switch_active_household', {
+          p_user_id: user?.id,
+          p_household_id: household.household_id
+        })
 
       if (error) throw error
 
       if (data) {
-        // Update local state
         setHouseholds(prev => prev.map(h => ({
           ...h,
-          is_active: h.id === household.id
+          is_active: h.household_id === household.household_id
         })))
 
-        // Notify parent component
         if (onHouseholdChange) {
           onHouseholdChange({
-            id: household.id,
-            name: household.name,
-            invite_code: household.invite_code,
-            userRole: household.role,
+            id: household.household_id,
+            name: household.household_name,
+            type: household.household_type
+          })
+        }
+
+        setShowModal(false)
+        Alert.alert('Success', `Switched to ${household.household_name}`)
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to switch household')
+    } finally {
+      setSwitching(false)
+    }
+  }
+
+  const getHouseholdIcon = (type: string) => {
+    return type === 'group' ? '👥' : '🏠'
+  }
+
+  return (
+    <>
+      <TouchableOpacity
+        style={styles.switcherButton}
+        onPress={() => setShowModal(true)}
+        activeOpacity={0.8}
+      >
+        <View style={styles.switcherContent}>
+          <Text style={styles.switcherText}>
+            {currentHousehold?.name || 'Select Household'}
+          </Text>
+          <Text style={styles.switcherHint}>
+            Tap to switch households
+          </Text>
+        </View>
+        <Text style={styles.switcherArrow}>⌄</Text>
+      </TouchableOpacity>
+
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowModal(false)}>
+              <Text style={styles.closeButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Switch Household</Text>
+            <TouchableOpacity onPress={() => {
+              setShowModal(false)
+              router.push('/(onboarding)/create-join-household')
+            }}>
+              <Text style={styles.addButton}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {households.map((household) => (
+              <TouchableOpacity
+                key={household.household_id}
+                style={[
+                  styles.householdItem,
+                  household.is_active && styles.householdItemActive
+                ]}
+                onPress={() => switchHousehold(household)}
+                disabled={switching}
+              >
+                <View style={styles.householdLeft}>
+                  <Text style={styles.householdIcon}>
+                    {getHouseholdIcon(household.household_type)}
+                  </Text>
+                  <View style={styles.householdInfo}>
+                    <Text style={[
+                      styles.householdName,
+                      household.is_active && styles.householdNameActive
+                    ]}>
+                      {household.household_name}
+                    </Text>
+                    <Text style={styles.householdMeta}>
+                      {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.user_role}
+                    </Text>
+                  </View>
+                </View>
+                {household.is_active && (
+                  <Text style={styles.activeIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
+    </>
+  )
+}
+
+const styles = StyleSheet.create({
+  switcherButton: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  switcherContent: {
+    flex: 1,
+  },
+  switcherText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  switcherHint: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  switcherArrow: {
+    fontSize: 16,
+    color: '#94a3b8',
+    marginLeft: 8,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8faff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  closeButton: {
+    fontSize: 24,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  addButton: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  householdItem: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  householdItemActive: {
+    borderWidth: 2,
+    borderColor: '#667eea',
+    backgroundColor: '#f0f4ff',
+  },
+  householdLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  householdIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  householdInfo: {
+    flex: 1,
+  },
+  householdName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  householdNameActive: {
+    color: '#667eea',
+  },
+  householdMeta: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  activeIndicator: {
+    fontSize: 20,
+    color: '#667eea',
+    fontWeight: 'bold',
+  },
+})
           })
         }
 

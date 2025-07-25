@@ -8,7 +8,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
-// import HouseholdSwitcher from '../../components/HouseholdSwitcherSimple' // Temporarily disabled
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
@@ -17,6 +16,17 @@ interface DashboardData {
   pendingTransfers: any[]
   recentBills: any[]
   household: any
+}
+
+interface Household {
+  id: string
+  name: string
+  invite_code: string
+  role: string
+  member_count: number
+  is_default: boolean
+  is_active: boolean
+  type: string
 }
 
 export default function DashboardScreen() {
@@ -28,11 +38,101 @@ export default function DashboardScreen() {
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [households, setHouseholds] = useState<Household[]>([])
+  const [showHouseholdModal, setShowHouseholdModal] = useState(false)
+  const [switchingHousehold, setSwitchingHousehold] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
     fetchDashboardData()
+    fetchUserHouseholds()
   }, [])
+
+  const fetchUserHouseholds = async () => {
+    if (!user) return
+
+    try {
+      const { data: householdData, error } = await supabase
+        .from('household_members')
+        .select(`
+          household_id,
+          role,
+          joined_at,
+          households (
+            id,
+            name,
+            invite_code,
+            type
+          )
+        `)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      // Get member counts for each household
+      const householdsWithCounts = await Promise.all(
+        (householdData || []).map(async (hm) => {
+          const { count } = await supabase
+            .from('household_members')
+            .select('*', { count: 'exact', head: true })
+            .eq('household_id', hm.household_id)
+
+          return {
+            id: hm.household_id,
+            name: hm.households.name,
+            invite_code: hm.households.invite_code,
+            type: hm.households.type || 'household',
+            role: hm.role,
+            member_count: count || 0,
+            is_default: false, // Will be updated below
+            is_active: data.household?.id === hm.household_id,
+            joined_at: hm.joined_at
+          }
+        })
+      )
+
+      setHouseholds(householdsWithCounts)
+    } catch (error) {
+      console.error('Error fetching households:', error)
+    }
+  }
+
+  const switchHousehold = async (household: Household) => {
+    if (household.is_active) {
+      setShowHouseholdModal(false)
+      return
+    }
+
+    setSwitchingHousehold(true)
+    try {
+      // Update the current data to use the new household
+      setData(prev => ({
+        ...prev,
+        household: {
+          id: household.id,
+          name: household.name,
+          invite_code: household.invite_code
+        }
+      }))
+
+      // Update households state
+      setHouseholds(prev => prev.map(h => ({
+        ...h,
+        is_active: h.id === household.id
+      })))
+
+      setShowHouseholdModal(false)
+
+      // Refresh dashboard data for new household
+      await fetchDashboardData()
+
+      Alert.alert('Success', `Switched to ${household.name}`)
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to switch household')
+    } finally {
+      setSwitchingHousehold(false)
+    }
+  }
 
   const fetchDashboardData = async () => {
     if (!user) return
@@ -286,15 +386,19 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Enhanced Household Card with Gradient */}
-        <TouchableOpacity
-          style={styles.householdCard}
-          onPress={() => router.push('/(app)/household/activity')}
-        >
+        {/* Enhanced Household Card with Dropdown */}
+        <View style={styles.householdCard}>
           <View style={styles.householdCardGradient}>
             <View style={styles.householdInfo}>
               <View style={styles.householdHeader}>
-                <Text style={styles.householdName}>🏡 {data.household.name}</Text>
+                <TouchableOpacity
+                  style={styles.householdSelector}
+                  onPress={() => setShowHouseholdModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.householdName}>🏡 {data.household.name}</Text>
+                  <Text style={styles.dropdownIcon}>▼</Text>
+                </TouchableOpacity>
                 <View style={styles.householdBadge}>
                   <Text style={styles.badgeText}>Active</Text>
                 </View>
@@ -620,6 +724,78 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
+
+      {/* Household Switcher Modal */}
+      <Modal
+        visible={showHouseholdModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHouseholdModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Switch Household</Text>
+            <TouchableOpacity onPress={() => {
+              setShowHouseholdModal(false)
+              router.push('/(onboarding)/create-join-household')
+            }}>
+              <Text style={styles.modalAddButton}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            {households.map((household) => (
+              <TouchableOpacity
+                key={household.id}
+                style={[
+                  styles.householdOption,
+                  household.is_active && styles.householdOptionActive
+                ]}
+                onPress={() => switchHousehold(household)}
+                disabled={switchingHousehold}
+              >
+                <View style={styles.householdOptionLeft}>
+                  <Text style={styles.householdOptionIcon}>
+                    {household.type === 'group' ? '👥' : '🏠'}
+                  </Text>
+                  <View style={styles.householdOptionInfo}>
+                    <Text style={[
+                      styles.householdOptionName,
+                      household.is_active && styles.householdOptionNameActive
+                    ]}>
+                      {household.name}
+                    </Text>
+                    <Text style={styles.householdOptionMeta}>
+                      {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
+                    </Text>
+                  </View>
+                </View>
+                {household.is_active && (
+                  <Text style={styles.activeIndicator}>✓</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {households.length === 0 && (
+              <View style={styles.emptyHouseholds}>
+                <Text style={styles.emptyHouseholdsText}>No households found</Text>
+                <TouchableOpacity
+                  style={styles.createFirstHouseholdButton}
+                  onPress={() => {
+                    setShowHouseholdModal(false)
+                    router.push('/(onboarding)/create-join-household')
+                  }}
+                >
+                  <Text style={styles.createFirstHouseholdButtonText}>Create Your First Household</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
     </ScrollView>
   )
 }
@@ -833,10 +1009,22 @@ const styles = StyleSheet.create({
   householdInfo: {
     flex: 1,
   },
+  householdSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
   householdName: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 4,
+    flex: 1,
+  },
+  dropdownIcon: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginLeft: 8,
     marginBottom: 4,
   },
   activityHint: {
@@ -1296,5 +1484,112 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#667eea',
     fontWeight: '500',
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#f8faff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  modalCloseButton: {
+    fontSize: 24,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
+  },
+  modalAddButton: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  modalContent: {
+    flex: 1,
+    paddingTop: 20,
+  },
+  householdOption: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  householdOptionActive: {
+    borderWidth: 2,
+    borderColor: '#667eea',
+    backgroundColor: '#f0f4ff',
+  },
+  householdOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  householdOptionIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  householdOptionInfo: {
+    flex: 1,
+  },
+  householdOptionName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  householdOptionNameActive: {
+    color: '#667eea',
+  },
+  householdOptionMeta: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  activeIndicator: {
+    fontSize: 20,
+    color: '#667eea',
+    fontWeight: 'bold',
+  },
+  emptyHouseholds: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+  },
+  emptyHouseholdsText: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  createFirstHouseholdButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  createFirstHouseholdButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 })

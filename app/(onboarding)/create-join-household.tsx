@@ -17,6 +17,7 @@ import { supabase } from '../../lib/supabase'
 export default function CreateJoinHouseholdScreen() {
   const [mode, setMode] = useState<'create' | 'join'>('create')
   const [householdName, setHouseholdName] = useState('')
+  const [householdType, setHouseholdType] = useState<'household' | 'group'>('household')
   const [inviteCode, setInviteCode] = useState('')
   const [loading, setLoading] = useState(false)
   const { user } = useAuth()
@@ -76,6 +77,7 @@ export default function CreateJoinHouseholdScreen() {
           name: householdName.trim(),
           admin_id: user.id,
           invite_code: code,
+          type: householdType,
         })
         .select()
         .single()
@@ -228,14 +230,67 @@ export default function CreateJoinHouseholdScreen() {
           {mode === 'create' ? (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Household Name</Text>
+                <Text style={styles.label}>
+                  {householdType === 'household' ? 'Household' : 'Group'} Name
+                </Text>
                 <TextInput
                   style={styles.input}
                   value={householdName}
                   onChangeText={setHouseholdName}
-                  placeholder="e.g., Smith Family, Apartment 4B"
+                  placeholder={
+                    householdType === 'household'
+                      ? "e.g., Smith Family, Apartment 4B"
+                      : "e.g., College Friends, Work Team"
+                  }
                   autoCapitalize="words"
                 />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Type</Text>
+                <View style={styles.typeSelector}>
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      householdType === 'household' && styles.activeTypeButton
+                    ]}
+                    onPress={() => setHouseholdType('household')}
+                  >
+                    <Text style={styles.typeIcon}>🏠</Text>
+                    <View style={styles.typeInfo}>
+                      <Text style={[
+                        styles.typeTitle,
+                        householdType === 'household' && styles.activeTypeTitle
+                      ]}>
+                        Household
+                      </Text>
+                      <Text style={styles.typeDescription}>
+                        Family, roommates, shared living
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.typeButton,
+                      householdType === 'group' && styles.activeTypeButton
+                    ]}
+                    onPress={() => setHouseholdType('group')}
+                  >
+                    <Text style={styles.typeIcon}>👥</Text>
+                    <View style={styles.typeInfo}>
+                      <Text style={[
+                        styles.typeTitle,
+                        householdType === 'group' && styles.activeTypeTitle
+                      ]}>
+                        Group
+                      </Text>
+                      <Text style={styles.typeDescription}>
+                        Friends, colleagues, teams
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <View style={styles.infoBox}>
@@ -417,5 +472,42 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // Type Selector Styles
+  typeSelector: {
+    gap: 12,
+  },
+  typeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
+  },
+  activeTypeButton: {
+    borderColor: '#667eea',
+    backgroundColor: '#f0f4ff',
+  },
+  typeIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  typeInfo: {
+    flex: 1,
+  },
+  typeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  activeTypeTitle: {
+    color: '#667eea',
+  },
+  typeDescription: {
+    fontSize: 14,
+    color: '#64748b',
   },
 })

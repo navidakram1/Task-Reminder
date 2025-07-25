@@ -280,13 +280,13 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.tertiaryAction]}
-            onPress={() => router.push('/(app)/tasks/random-assignment')}
+            onPress={() => router.push('/(app)/approvals')}
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>🎲</Text>
+              <Text style={styles.actionIcon}>✅</Text>
             </View>
-            <Text style={styles.actionTitle}>Shuffle Tasks</Text>
-            <Text style={styles.actionSubtitle}>Random assign</Text>
+            <Text style={styles.actionTitle}>Approvals</Text>
+            <Text style={styles.actionSubtitle}>Review tasks</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

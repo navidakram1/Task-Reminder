@@ -7,11 +7,10 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
@@ -324,26 +323,69 @@ export default function CreateEditTaskScreen() {
             )}
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabel}>
-                <Text style={styles.label}>Random Assignment</Text>
-                <Text style={styles.switchDescription}>
-                  Let the app assign this task randomly
-                </Text>
-              </View>
-              <Switch
-                value={randomAssignment}
-                onValueChange={setRandomAssignment}
-                trackColor={{ false: '#ddd', true: '#667eea' }}
-                thumbColor={randomAssignment ? '#fff' : '#f4f3f4'}
-              />
-            </View>
-          </View>
+          {/* Random assignment switch removed - now part of assignment section */}
 
-          {!randomAssignment && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Assign To</Text>
+          <View style={styles.inputGroup}>
+            <View style={styles.assignmentHeader}>
+              <Text style={styles.label}>Task Assignment</Text>
+              <TouchableOpacity
+                style={styles.shuffleButton}
+                onPress={() => {
+                  if (householdMembers.length > 0) {
+                    const randomMember = householdMembers[Math.floor(Math.random() * householdMembers.length)]
+                    setAssigneeId(randomMember.user_id)
+                    setRandomAssignment(false)
+                    Alert.alert('🎲 Shuffled!', `Task assigned to ${randomMember.profiles?.name || 'Unknown'}`)
+                  }
+                }}
+              >
+                <Text style={styles.shuffleButtonText}>🎲 Shuffle</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Assignment Options */}
+            <View style={styles.assignmentOptions}>
+              <TouchableOpacity
+                style={[
+                  styles.assignmentOption,
+                  randomAssignment && styles.assignmentOptionActive
+                ]}
+                onPress={() => {
+                  setRandomAssignment(true)
+                  setAssigneeId('')
+                }}
+              >
+                <Text style={[
+                  styles.assignmentOptionText,
+                  randomAssignment && styles.assignmentOptionTextActive
+                ]}>
+                  🎲 Random Assignment
+                </Text>
+                <Text style={styles.assignmentOptionDescription}>
+                  Let the app assign randomly
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.assignmentOption,
+                  !randomAssignment && styles.assignmentOptionActive
+                ]}
+                onPress={() => setRandomAssignment(false)}
+              >
+                <Text style={[
+                  styles.assignmentOptionText,
+                  !randomAssignment && styles.assignmentOptionTextActive
+                ]}>
+                  👤 Specific Person
+                </Text>
+                <Text style={styles.assignmentOptionDescription}>
+                  Choose who does this task
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {!randomAssignment && (
               <View style={styles.pickerContainer}>
                 <Picker
                   selectedValue={assigneeId}
@@ -360,23 +402,88 @@ export default function CreateEditTaskScreen() {
                   ))}
                 </Picker>
               </View>
-            </View>
-          )}
+            )}
+
+            {randomAssignment && (
+              <View style={styles.randomAssignmentInfo}>
+                <Text style={styles.randomAssignmentText}>
+                  🎲 This task will be assigned randomly to a household member when created
+                </Text>
+              </View>
+            )}
+          </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Recurrence</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={recurrence}
-                onValueChange={setRecurrence}
-                style={styles.picker}
+            <Text style={styles.label}>Repeat Task</Text>
+
+            {/* Recurrence Selection Buttons */}
+            <View style={styles.recurrenceContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrence === 'none' && styles.recurrenceButtonActive
+                ]}
+                onPress={() => setRecurrence('none')}
               >
-                <Picker.Item label="No recurrence" value="none" />
-                <Picker.Item label="Daily" value="daily" />
-                <Picker.Item label="Weekly" value="weekly" />
-                <Picker.Item label="Monthly" value="monthly" />
-              </Picker>
+                <Text style={[
+                  styles.recurrenceButtonText,
+                  recurrence === 'none' && styles.recurrenceButtonTextActive
+                ]}>
+                  🚫 No Repeat
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrence === 'daily' && styles.recurrenceButtonActive
+                ]}
+                onPress={() => setRecurrence('daily')}
+              >
+                <Text style={[
+                  styles.recurrenceButtonText,
+                  recurrence === 'daily' && styles.recurrenceButtonTextActive
+                ]}>
+                  📅 Daily
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrence === 'weekly' && styles.recurrenceButtonActive
+                ]}
+                onPress={() => setRecurrence('weekly')}
+              >
+                <Text style={[
+                  styles.recurrenceButtonText,
+                  recurrence === 'weekly' && styles.recurrenceButtonTextActive
+                ]}>
+                  📆 Weekly
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.recurrenceButton,
+                  recurrence === 'monthly' && styles.recurrenceButtonActive
+                ]}
+                onPress={() => setRecurrence('monthly')}
+              >
+                <Text style={[
+                  styles.recurrenceButtonText,
+                  recurrence === 'monthly' && styles.recurrenceButtonTextActive
+                ]}>
+                  🗓️ Monthly
+                </Text>
+              </TouchableOpacity>
             </View>
+
+            {recurrence !== 'none' && (
+              <Text style={styles.recurrencePreview}>
+                ✨ This task will repeat {recurrence}
+              </Text>
+            )}
           </View>
 
           <View style={styles.infoBox}>
@@ -598,5 +705,107 @@ const styles = StyleSheet.create({
     color: '#28a745',
     marginTop: 8,
     fontWeight: '500',
+  },
+  // Recurrence Button Styles
+  recurrenceContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  recurrenceButton: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  recurrenceButtonActive: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
+  },
+  recurrenceButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  recurrenceButtonTextActive: {
+    color: '#fff',
+  },
+  recurrencePreview: {
+    fontSize: 14,
+    color: '#667eea',
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  // Assignment Section Styles
+  assignmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  shuffleButton: {
+    backgroundColor: '#ffc107',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  shuffleButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  assignmentOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  assignmentOption: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    alignItems: 'center',
+  },
+  assignmentOptionActive: {
+    backgroundColor: '#f8faff',
+    borderColor: '#667eea',
+  },
+  assignmentOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+    marginBottom: 4,
+  },
+  assignmentOptionTextActive: {
+    color: '#667eea',
+  },
+  assignmentOptionDescription: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+  },
+  randomAssignmentInfo: {
+    backgroundColor: '#fff3cd',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ffeaa7',
+  },
+  randomAssignmentText: {
+    fontSize: 14,
+    color: '#856404',
+    textAlign: 'center',
   },
 })

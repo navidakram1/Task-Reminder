@@ -289,14 +289,7 @@ export default function TaskListScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.shuffleButton}
-          onPress={() => router.push('/(app)/tasks/random-assignment')}
-        >
-          <Text style={styles.shuffleButtonText}>🔄 Shuffle Tasks</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Shuffle button removed - now available in task creation */}
     </View>
   )
 }
@@ -480,22 +473,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  bottomActions: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
-  },
-  shuffleButton: {
-    backgroundColor: '#ffc107',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  shuffleButtonText: {
-    color: '#000',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  // bottomActions and shuffle button styles removed
   taskTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',

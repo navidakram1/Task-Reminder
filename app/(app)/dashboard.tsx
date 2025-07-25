@@ -226,24 +226,35 @@ export default function DashboardScreen() {
           })}</Text>
         </View>
 
-        {/* Test Component */}
-        <View style={{ padding: 20, backgroundColor: '#f0f8ff', borderRadius: 12, marginVertical: 10, alignItems: 'center' }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#28a745', marginBottom: 4 }}>✅ App is working!</Text>
-          <Text style={{ fontSize: 14, color: '#666' }}>All components loaded successfully</Text>
-        </View>
-
-        {/* HouseholdSwitcher temporarily disabled */}
-
+        {/* Enhanced Household Card with Gradient */}
         <TouchableOpacity
           style={styles.householdCard}
           onPress={() => router.push('/(app)/household/activity')}
         >
-          <View style={styles.householdInfo}>
-            <Text style={styles.householdName}>{data.household.name}</Text>
-            <Text style={styles.activityHint}>📋 View recent activity</Text>
-          </View>
-          <View style={styles.householdIcon}>
-            <Text style={styles.householdIconText}>→</Text>
+          <View style={styles.householdCardGradient}>
+            <View style={styles.householdInfo}>
+              <Text style={styles.householdName}>🏡 {data.household.name}</Text>
+              <Text style={styles.activityHint}>✨ Tap to view recent activity</Text>
+              <View style={styles.householdStats}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{data.upcomingTasks.length}</Text>
+                  <Text style={styles.statLabel}>Tasks</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{data.recentBills.length}</Text>
+                  <Text style={styles.statLabel}>Bills</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>{data.pendingTransfers.length}</Text>
+                  <Text style={styles.statLabel}>Transfers</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.householdIcon}>
+              <Text style={styles.householdIconText}>→</Text>
+            </View>
           </View>
         </TouchableOpacity>
       </View>

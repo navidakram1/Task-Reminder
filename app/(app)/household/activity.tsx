@@ -7,26 +7,49 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
 interface ActivityItem {
   id: string
-  type: 'task_created' | 'task_completed' | 'task_approved' | 'bill_added' | 'member_joined' | 'role_changed'
-  user_name: string
   user_id: string
+  activity_type: string
   description: string
-  created_at: string
   metadata?: any
+  created_at: string
+  user_name?: string
+}
+
+interface Proposal {
+  id: string
+  title: string
+  description: string
+  type: 'rule_change' | 'member_removal' | 'household_setting' | 'other'
+  created_by: string
+  created_by_name: string
+  status: 'active' | 'passed' | 'rejected'
+  votes_for: number
+  votes_against: number
+  total_members: number
+  expires_at: string
+  created_at: string
 }
 
 export default function HouseholdActivityScreen() {
   const [activities, setActivities] = useState<ActivityItem[]>([])
+  const [proposals, setProposals] = useState<Proposal[]>([])
   const [household, setHousehold] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'activity' | 'proposals' | 'settings'>('activity')
+  const [showCreateProposal, setShowCreateProposal] = useState(false)
+  const [newProposal, setNewProposal] = useState({
+    title: '',
+    description: '',
+    type: 'other' as const
+  })
   const { user } = useAuth()
 
   useEffect(() => {

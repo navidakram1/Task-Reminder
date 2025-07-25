@@ -183,6 +183,25 @@ export default function TaskListScreen() {
     }
   }
 
+  const isOverdue = (dueDate: string) => {
+    return new Date(dueDate) < new Date()
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Today'
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return 'Tomorrow'
+    } else {
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    }
+  }
+
   const getTaskCardStyle = (status: string) => {
     switch (status) {
       case 'completed':
@@ -649,7 +668,7 @@ export default function TaskListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8faff',
   },
   loadingContainer: {
     flex: 1,

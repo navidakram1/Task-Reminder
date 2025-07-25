@@ -27,175 +27,229 @@ INSERT INTO expense_categories (name, icon, color, keywords) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Safely add new columns to existing bills table
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN description TEXT;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN currency TEXT DEFAULT 'USD';
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN due_date DATE;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN receipt_urls TEXT[];
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN split_method TEXT DEFAULT 'equal';
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN tax_amount DECIMAL(10,2) DEFAULT 0;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN tip_amount DECIMAL(10,2) DEFAULT 0;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN tip_percentage DECIMAL(5,2);
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN is_recurring BOOLEAN DEFAULT false;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN recurring_frequency TEXT;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN next_due_date DATE;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN merchant_name TEXT;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN location TEXT;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN notes TEXT;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN is_settled BOOLEAN DEFAULT false;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
     ALTER TABLE bills ADD COLUMN settled_at TIMESTAMP WITH TIME ZONE;
 EXCEPTION
     WHEN duplicate_column THEN NULL;
 END $$;
 
--- Safely add constraints
-DO $$
+-- Safely add new columns to existing bill_splits table
+DO $$ 
 BEGIN
-    ALTER TABLE bills ADD CONSTRAINT bills_currency_check
+    ALTER TABLE bill_splits ADD COLUMN currency TEXT DEFAULT 'USD';
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN shares INTEGER DEFAULT 1;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN percentage DECIMAL(5,2);
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN paid_amount DECIMAL(10,2) DEFAULT 0;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN payment_method TEXT;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN payment_confirmation_url TEXT;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN reminder_count INTEGER DEFAULT 0;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD COLUMN last_reminder_sent TIMESTAMP WITH TIME ZONE;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+-- Safely add constraints
+DO $$ 
+BEGIN
+    ALTER TABLE bills ADD CONSTRAINT bills_currency_check 
         CHECK (currency IN ('USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'INR'));
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
-    ALTER TABLE bills ADD CONSTRAINT bills_split_method_check
+    ALTER TABLE bills ADD CONSTRAINT bills_split_method_check 
         CHECK (split_method IN ('equal', 'percentage', 'custom', 'by_item', 'by_shares'));
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$
+DO $$ 
 BEGIN
-    ALTER TABLE bills ADD CONSTRAINT bills_recurring_frequency_check
+    ALTER TABLE bills ADD CONSTRAINT bills_recurring_frequency_check 
         CHECK (recurring_frequency IN ('weekly', 'monthly', 'yearly'));
 EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- Enhanced bill_splits table with advanced features
--- Add new columns to existing bill_splits table
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS shares INTEGER DEFAULT 1;
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS percentage DECIMAL(5,2);
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS paid_amount DECIMAL(10,2) DEFAULT 0;
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS payment_method TEXT;
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS payment_confirmation_url TEXT;
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS reminder_count INTEGER DEFAULT 0;
-ALTER TABLE bill_splits ADD COLUMN IF NOT EXISTS last_reminder_sent TIMESTAMP WITH TIME ZONE;
+-- Update bill_splits status constraint safely
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits DROP CONSTRAINT IF EXISTS bill_splits_status_check;
+    ALTER TABLE bill_splits ADD CONSTRAINT bill_splits_status_check 
+        CHECK (status IN ('owed', 'partially_paid', 'paid', 'disputed'));
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
 
--- Update status column to support new values
-ALTER TABLE bill_splits DROP CONSTRAINT IF EXISTS bill_splits_status_check;
-ALTER TABLE bill_splits ADD CONSTRAINT bill_splits_status_check
-    CHECK (status IN ('owed', 'partially_paid', 'paid', 'disputed'));
+DO $$ 
+BEGIN
+    ALTER TABLE bill_splits ADD CONSTRAINT bill_splits_payment_method_check 
+        CHECK (payment_method IN ('cash', 'venmo', 'paypal', 'zelle', 'bank_transfer', 'other'));
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
--- Add payment method constraint
-ALTER TABLE bill_splits ADD CONSTRAINT bill_splits_payment_method_check
-    CHECK (payment_method IN ('cash', 'venmo', 'paypal', 'zelle', 'bank_transfer', 'other'));
-
--- Bill items table for itemized splitting
+-- Create new tables (safe with IF NOT EXISTS)
 CREATE TABLE IF NOT EXISTS bill_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     bill_id UUID NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
     quantity INTEGER DEFAULT 1,
-    participants UUID[] NOT NULL, -- Array of user IDs who share this item
+    participants UUID[] NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Payment confirmations table
 CREATE TABLE IF NOT EXISTS payment_confirmations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     split_id UUID NOT NULL REFERENCES bill_splits(id) ON DELETE CASCADE,
@@ -207,7 +261,6 @@ CREATE TABLE IF NOT EXISTS payment_confirmations (
     confirmed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Notifications table for reminders and alerts
 CREATE TABLE IF NOT EXISTS bill_notifications (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -222,47 +275,32 @@ CREATE TABLE IF NOT EXISTS bill_notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Budget tracking table
 CREATE TABLE IF NOT EXISTS household_budgets (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-    category_id UUID REFERENCES expense_categories(id),
+    category_name TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
     period TEXT NOT NULL CHECK (period IN ('weekly', 'monthly', 'yearly')),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    alert_threshold DECIMAL(5,2) DEFAULT 80, -- Alert when 80% of budget is reached
+    alert_threshold DECIMAL(5,2) DEFAULT 80,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Spending analytics materialized view for performance
--- Note: Using existing 'category' column instead of 'category_id'
-CREATE MATERIALIZED VIEW IF NOT EXISTS spending_analytics AS
-SELECT
-    b.household_id,
-    COALESCE(b.category_id, ec_by_name.id) as category_id,
-    COALESCE(ec.name, b.category, 'Uncategorized') as category_name,
-    DATE_TRUNC('month', b.date) as month,
-    DATE_TRUNC('week', b.date) as week,
-    COUNT(*) as transaction_count,
-    SUM(b.amount) as total_amount,
-    AVG(b.amount) as avg_amount,
-    COALESCE(b.currency, 'USD') as currency
-FROM bills b
-LEFT JOIN expense_categories ec ON b.category_id = ec.id
-LEFT JOIN expense_categories ec_by_name ON LOWER(b.category) = LOWER(ec_by_name.name)
-GROUP BY b.household_id, COALESCE(b.category_id, ec_by_name.id), COALESCE(ec.name, b.category, 'Uncategorized'), DATE_TRUNC('month', b.date), DATE_TRUNC('week', b.date), COALESCE(b.currency, 'USD');
-
--- Create indexes for better performance
+-- Create indexes safely
 CREATE INDEX IF NOT EXISTS idx_bills_household_id ON bills(household_id);
 CREATE INDEX IF NOT EXISTS idx_bills_paid_by ON bills(paid_by);
 CREATE INDEX IF NOT EXISTS idx_bills_date ON bills(date);
+CREATE INDEX IF NOT EXISTS idx_bills_category ON bills(category);
 CREATE INDEX IF NOT EXISTS idx_bill_splits_bill_id ON bill_splits(bill_id);
 CREATE INDEX IF NOT EXISTS idx_bill_splits_user_id ON bill_splits(user_id);
 CREATE INDEX IF NOT EXISTS idx_bill_splits_status ON bill_splits(status);
+CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_notifications_user_id ON bill_notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_expense_categories_name ON expense_categories(name);
 
--- Enable Row Level Security on new tables only
+-- Enable RLS on new tables only (safely)
 DO $$
 BEGIN
     ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
@@ -298,7 +336,7 @@ EXCEPTION
     WHEN others THEN NULL;
 END $$;
 
--- RLS Policies for expense_categories (public read) - only create if not exists
+-- Create RLS policies safely (only for new tables)
 DO $$
 BEGIN
     CREATE POLICY "Anyone can view expense categories" ON expense_categories
@@ -307,7 +345,6 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- RLS Policies for bill_items - only create if not exists
 DO $$
 BEGIN
     CREATE POLICY "Users can view bill items in their household" ON bill_items
@@ -340,7 +377,6 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- RLS Policies for payment_confirmations - only create if not exists
 DO $$
 BEGIN
     CREATE POLICY "Users can view payment confirmations in their household" ON payment_confirmations
@@ -366,7 +402,6 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- RLS Policies for bill_notifications - only create if not exists
 DO $$
 BEGIN
     CREATE POLICY "Users can view their own notifications" ON bill_notifications
@@ -383,7 +418,6 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- RLS Policies for household_budgets - only create if not exists
 DO $$
 BEGIN
     CREATE POLICY "Users can view budgets in their household" ON household_budgets
@@ -410,67 +444,7 @@ EXCEPTION
     WHEN duplicate_object THEN NULL;
 END $$;
 
--- Function to update bill split status when settled
-CREATE OR REPLACE FUNCTION mark_split_as_paid(split_id UUID)
-RETURNS BOOLEAN AS $$
-BEGIN
-    UPDATE bill_splits 
-    SET 
-        status = 'paid',
-        settled_at = NOW(),
-        updated_at = NOW()
-    WHERE id = split_id;
-    
-    RETURN TRUE;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Enhanced function to calculate user debt summary with partial payments
-CREATE OR REPLACE FUNCTION get_user_debt_summary(p_user_id UUID, p_household_id UUID)
-RETURNS TABLE(
-    total_owed DECIMAL,
-    total_owing DECIMAL,
-    net_amount DECIMAL,
-    partially_paid DECIMAL,
-    overdue_amount DECIMAL
-) AS $$
-BEGIN
-    RETURN QUERY
-    WITH user_debts AS (
-        SELECT
-            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') THEN bs.amount - bs.paid_amount ELSE 0 END), 0) as owed,
-            COALESCE(SUM(bs.paid_amount), 0) as partial_paid,
-            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') AND b.due_date < CURRENT_DATE THEN bs.amount - bs.paid_amount ELSE 0 END), 0) as overdue,
-            0 as owing
-        FROM bill_splits bs
-        JOIN bills b ON bs.bill_id = b.id
-        WHERE bs.user_id = p_user_id
-        AND b.household_id = p_household_id
-
-        UNION ALL
-
-        SELECT
-            0 as owed,
-            0 as partial_paid,
-            0 as overdue,
-            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') THEN bs.amount - bs.paid_amount ELSE 0 END), 0) as owing
-        FROM bill_splits bs
-        JOIN bills b ON bs.bill_id = b.id
-        WHERE b.paid_by = p_user_id
-        AND b.household_id = p_household_id
-        AND bs.user_id != p_user_id
-    )
-    SELECT
-        SUM(owed) as total_owed,
-        SUM(owing) as total_owing,
-        SUM(owing) - SUM(owed) as net_amount,
-        SUM(partial_paid) as partially_paid,
-        SUM(overdue) as overdue_amount
-    FROM user_debts;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Function for smart expense categorization
+-- Function for smart expense categorization (returns category name)
 CREATE OR REPLACE FUNCTION suggest_expense_category(p_title TEXT, p_merchant TEXT DEFAULT NULL, p_amount DECIMAL DEFAULT NULL)
 RETURNS TEXT AS $$
 DECLARE
@@ -489,7 +463,7 @@ BEGIN
             OR merchant_lower LIKE '%' || keyword || '%'
         )
     )
-    ORDER BY array_length(keywords, 1) DESC -- Prefer categories with more specific keywords
+    ORDER BY array_length(keywords, 1) DESC
     LIMIT 1;
 
     -- If no match found, return default category
@@ -498,6 +472,80 @@ BEGIN
     END IF;
 
     RETURN category_name;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Enhanced function to calculate user debt summary with partial payments
+CREATE OR REPLACE FUNCTION get_user_debt_summary(p_user_id UUID, p_household_id UUID)
+RETURNS TABLE(
+    total_owed DECIMAL,
+    total_owing DECIMAL,
+    net_amount DECIMAL,
+    partially_paid DECIMAL,
+    overdue_amount DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH user_debts AS (
+        SELECT
+            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') THEN bs.amount - COALESCE(bs.paid_amount, 0) ELSE 0 END), 0) as owed,
+            COALESCE(SUM(COALESCE(bs.paid_amount, 0)), 0) as partial_paid,
+            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') AND b.due_date < CURRENT_DATE THEN bs.amount - COALESCE(bs.paid_amount, 0) ELSE 0 END), 0) as overdue,
+            0 as owing
+        FROM bill_splits bs
+        JOIN bills b ON bs.bill_id = b.id
+        WHERE bs.user_id = p_user_id
+        AND b.household_id = p_household_id
+
+        UNION ALL
+
+        SELECT
+            0 as owed,
+            0 as partial_paid,
+            0 as overdue,
+            COALESCE(SUM(CASE WHEN bs.status IN ('owed', 'partially_paid') THEN bs.amount - COALESCE(bs.paid_amount, 0) ELSE 0 END), 0) as owing
+        FROM bill_splits bs
+        JOIN bills b ON bs.bill_id = b.id
+        WHERE b.paid_by = p_user_id
+        AND b.household_id = p_household_id
+        AND bs.user_id != p_user_id
+    )
+    SELECT
+        SUM(owed) as total_owed,
+        SUM(owing) as total_owing,
+        SUM(owing) - SUM(owed) as net_amount,
+        SUM(partial_paid) as partially_paid,
+        SUM(overdue) as overdue_amount
+    FROM user_debts;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Enhanced function to get household debt summary
+CREATE OR REPLACE FUNCTION get_household_debt_summary(p_household_id UUID)
+RETURNS TABLE(
+    user_id UUID,
+    user_name TEXT,
+    total_owed DECIMAL,
+    total_owing DECIMAL,
+    net_amount DECIMAL,
+    partially_paid DECIMAL,
+    overdue_amount DECIMAL
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        hm.user_id,
+        p.name as user_name,
+        COALESCE(debt.total_owed, 0) as total_owed,
+        COALESCE(debt.total_owing, 0) as total_owing,
+        COALESCE(debt.net_amount, 0) as net_amount,
+        COALESCE(debt.partially_paid, 0) as partially_paid,
+        COALESCE(debt.overdue_amount, 0) as overdue_amount
+    FROM household_members hm
+    JOIN profiles p ON hm.user_id = p.id
+    LEFT JOIN LATERAL get_user_debt_summary(hm.user_id, p_household_id) debt ON true
+    WHERE hm.household_id = p_household_id
+    ORDER BY debt.net_amount DESC NULLS LAST;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -516,7 +564,7 @@ DECLARE
     settlement_amount DECIMAL;
 BEGIN
     -- Create temporary table with user balances
-    CREATE TEMP TABLE user_balances AS
+    CREATE TEMP TABLE IF NOT EXISTS user_balances AS
     SELECT
         hm.user_id,
         COALESCE(debt.net_amount, 0) as balance
@@ -551,36 +599,76 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    DROP TABLE user_balances;
+    DROP TABLE IF EXISTS user_balances;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Enhanced function to get household debt summary
-CREATE OR REPLACE FUNCTION get_household_debt_summary(p_household_id UUID)
+-- Function to generate spending analytics (works with existing category column)
+CREATE OR REPLACE FUNCTION get_spending_analytics(
+    p_household_id UUID,
+    p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '1 year',
+    p_end_date DATE DEFAULT CURRENT_DATE
+)
 RETURNS TABLE(
-    user_id UUID,
-    user_name TEXT,
-    total_owed DECIMAL,
-    total_owing DECIMAL,
-    net_amount DECIMAL,
-    partially_paid DECIMAL,
-    overdue_amount DECIMAL
+    category_name TEXT,
+    category_icon TEXT,
+    total_amount DECIMAL,
+    transaction_count INTEGER,
+    avg_amount DECIMAL,
+    percentage_of_total DECIMAL,
+    trend_direction TEXT -- 'up', 'down', 'stable'
 ) AS $$
+DECLARE
+    total_spending DECIMAL;
 BEGIN
+    -- Calculate total spending for percentage calculation
+    SELECT COALESCE(SUM(amount), 0) INTO total_spending
+    FROM bills
+    WHERE household_id = p_household_id
+    AND date BETWEEN p_start_date AND p_end_date;
+
     RETURN QUERY
+    WITH current_period AS (
+        SELECT
+            COALESCE(b.category, 'Uncategorized') as cat_name,
+            COALESCE(ec.icon, '📋') as cat_icon,
+            SUM(b.amount) as total_amt,
+            COUNT(*) as trans_count,
+            AVG(b.amount) as avg_amt
+        FROM bills b
+        LEFT JOIN expense_categories ec ON LOWER(b.category) = LOWER(ec.name)
+        WHERE b.household_id = p_household_id
+        AND b.date BETWEEN p_start_date AND p_end_date
+        GROUP BY COALESCE(b.category, 'Uncategorized'), COALESCE(ec.icon, '📋')
+    ),
+    previous_period AS (
+        SELECT
+            COALESCE(b.category, 'Uncategorized') as cat_name,
+            SUM(b.amount) as prev_total
+        FROM bills b
+        WHERE b.household_id = p_household_id
+        AND b.date BETWEEN (p_start_date - (p_end_date - p_start_date)) AND p_start_date
+        GROUP BY COALESCE(b.category, 'Uncategorized')
+    )
     SELECT
-        hm.user_id,
-        p.name as user_name,
-        COALESCE(debt.total_owed, 0) as total_owed,
-        COALESCE(debt.total_owing, 0) as total_owing,
-        COALESCE(debt.net_amount, 0) as net_amount,
-        COALESCE(debt.partially_paid, 0) as partially_paid,
-        COALESCE(debt.overdue_amount, 0) as overdue_amount
-    FROM household_members hm
-    JOIN profiles p ON hm.user_id = p.id
-    LEFT JOIN LATERAL get_user_debt_summary(hm.user_id, p_household_id) debt ON true
-    WHERE hm.household_id = p_household_id
-    ORDER BY debt.net_amount DESC NULLS LAST;
+        cp.cat_name,
+        cp.cat_icon,
+        cp.total_amt,
+        cp.trans_count::INTEGER,
+        cp.avg_amt,
+        CASE
+            WHEN total_spending > 0 THEN ROUND((cp.total_amt / total_spending * 100), 2)
+            ELSE 0
+        END as percentage_of_total,
+        CASE
+            WHEN pp.prev_total IS NULL THEN 'new'::TEXT
+            WHEN cp.total_amt > pp.prev_total * 1.1 THEN 'up'::TEXT
+            WHEN cp.total_amt < pp.prev_total * 0.9 THEN 'down'::TEXT
+            ELSE 'stable'::TEXT
+        END as trend_direction
+    FROM current_period cp
+    LEFT JOIN previous_period pp ON cp.cat_name = pp.cat_name
+    ORDER BY cp.total_amt DESC;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -633,7 +721,7 @@ BEGIN
             -- Update reminder tracking
             UPDATE bill_splits
             SET
-                reminder_count = reminder_count + 1,
+                reminder_count = COALESCE(reminder_count, 0) + 1,
                 last_reminder_sent = CURRENT_DATE
             WHERE id = split_record.id;
 
@@ -645,73 +733,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to generate spending analytics
-CREATE OR REPLACE FUNCTION get_spending_analytics(
-    p_household_id UUID,
-    p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '1 year',
-    p_end_date DATE DEFAULT CURRENT_DATE
-)
-RETURNS TABLE(
-    category_name TEXT,
-    category_icon TEXT,
-    total_amount DECIMAL,
-    transaction_count INTEGER,
-    avg_amount DECIMAL,
-    percentage_of_total DECIMAL,
-    trend_direction TEXT -- 'up', 'down', 'stable'
-) AS $$
-DECLARE
-    total_spending DECIMAL;
+-- Function to update bill split status when settled
+CREATE OR REPLACE FUNCTION mark_split_as_paid(split_id UUID)
+RETURNS BOOLEAN AS $$
 BEGIN
-    -- Calculate total spending for percentage calculation
-    SELECT COALESCE(SUM(amount), 0) INTO total_spending
-    FROM bills
-    WHERE household_id = p_household_id
-    AND date BETWEEN p_start_date AND p_end_date;
+    UPDATE bill_splits
+    SET
+        status = 'paid',
+        settled_at = NOW(),
+        updated_at = NOW()
+    WHERE id = split_id;
 
-    RETURN QUERY
-    WITH current_period AS (
-        SELECT
-            COALESCE(ec.name, b.category, 'Uncategorized') as cat_name,
-            COALESCE(ec.icon, '📋') as cat_icon,
-            SUM(b.amount) as total_amt,
-            COUNT(*) as trans_count,
-            AVG(b.amount) as avg_amt
-        FROM bills b
-        LEFT JOIN expense_categories ec ON (b.category_id = ec.id OR LOWER(b.category) = LOWER(ec.name))
-        WHERE b.household_id = p_household_id
-        AND b.date BETWEEN p_start_date AND p_end_date
-        GROUP BY COALESCE(ec.name, b.category, 'Uncategorized'), COALESCE(ec.icon, '📋')
-    ),
-    previous_period AS (
-        SELECT
-            COALESCE(ec.name, b.category, 'Uncategorized') as cat_name,
-            SUM(b.amount) as prev_total
-        FROM bills b
-        LEFT JOIN expense_categories ec ON (b.category_id = ec.id OR LOWER(b.category) = LOWER(ec.name))
-        WHERE b.household_id = p_household_id
-        AND b.date BETWEEN (p_start_date - (p_end_date - p_start_date)) AND p_start_date
-        GROUP BY COALESCE(ec.name, b.category, 'Uncategorized')
-    )
-    SELECT
-        cp.cat_name,
-        cp.cat_icon,
-        cp.total_amt,
-        cp.trans_count::INTEGER,
-        cp.avg_amt,
-        CASE
-            WHEN total_spending > 0 THEN ROUND((cp.total_amt / total_spending * 100), 2)
-            ELSE 0
-        END as percentage_of_total,
-        CASE
-            WHEN pp.prev_total IS NULL THEN 'new'::TEXT
-            WHEN cp.total_amt > pp.prev_total * 1.1 THEN 'up'::TEXT
-            WHEN cp.total_amt < pp.prev_total * 0.9 THEN 'down'::TEXT
-            ELSE 'stable'::TEXT
-        END as trend_direction
-    FROM current_period cp
-    LEFT JOIN previous_period pp ON cp.cat_name = pp.cat_name
-    ORDER BY cp.total_amt DESC;
+    RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -724,55 +757,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply update triggers
-DROP TRIGGER IF EXISTS update_bills_updated_at ON bills;
-CREATE TRIGGER update_bills_updated_at
-    BEFORE UPDATE ON bills
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_bill_splits_updated_at ON bill_splits;
-CREATE TRIGGER update_bill_splits_updated_at
-    BEFORE UPDATE ON bill_splits
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
--- Function to validate bill splits total matches bill amount
-CREATE OR REPLACE FUNCTION validate_bill_splits()
-RETURNS TRIGGER AS $$
-DECLARE
-    bill_amount DECIMAL;
-    splits_total DECIMAL;
+-- Apply update triggers to existing tables (safely)
+DO $$
 BEGIN
-    -- Get the bill amount
-    SELECT amount INTO bill_amount
-    FROM bills
-    WHERE id = NEW.bill_id;
-    
-    -- Calculate total of all splits for this bill
-    SELECT COALESCE(SUM(amount), 0) INTO splits_total
-    FROM bill_splits
-    WHERE bill_id = NEW.bill_id;
-    
-    -- Add the new split amount if this is an insert
-    IF TG_OP = 'INSERT' THEN
-        splits_total := splits_total + NEW.amount;
-    ELSIF TG_OP = 'UPDATE' THEN
-        splits_total := splits_total - OLD.amount + NEW.amount;
-    END IF;
-    
-    -- Allow some small rounding differences (1 cent)
-    IF ABS(splits_total - bill_amount) > 0.01 THEN
-        RAISE EXCEPTION 'Bill splits total (%) does not match bill amount (%)', splits_total, bill_amount;
-    END IF;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    DROP TRIGGER IF EXISTS update_bills_updated_at ON bills;
+    CREATE TRIGGER update_bills_updated_at
+        BEFORE UPDATE ON bills
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;
 
--- Apply validation trigger (optional - can be disabled if you want to allow partial splits)
--- DROP TRIGGER IF EXISTS validate_bill_splits_trigger ON bill_splits;
--- CREATE TRIGGER validate_bill_splits_trigger
---     BEFORE INSERT OR UPDATE ON bill_splits
---     FOR EACH ROW
---     EXECUTE FUNCTION validate_bill_splits();
+DO $$
+BEGIN
+    DROP TRIGGER IF EXISTS update_bill_splits_updated_at ON bill_splits;
+    CREATE TRIGGER update_bill_splits_updated_at
+        BEFORE UPDATE ON bill_splits
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+EXCEPTION
+    WHEN others THEN NULL;
+END $$;

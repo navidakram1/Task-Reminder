@@ -2,18 +2,21 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
+    Dimensions,
     RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
 type FilterType = 'all' | 'assigned' | 'pending' | 'completed'
+
+const { width: screenWidth } = Dimensions.get('window')
 
 export default function TaskListScreen() {
   const [tasks, setTasks] = useState<any[]>([])
@@ -180,6 +183,92 @@ export default function TaskListScreen() {
     }
   }
 
+  const getTaskCardStyle = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          backgroundColor: '#f8fff9',
+          borderLeftColor: '#28a745',
+          borderLeftWidth: 4,
+        }
+      case 'pending':
+        return {
+          backgroundColor: '#fffef8',
+          borderLeftColor: '#ffc107',
+          borderLeftWidth: 4,
+        }
+      case 'transfer_requested':
+        return {
+          backgroundColor: '#f8faff',
+          borderLeftColor: '#667eea',
+          borderLeftWidth: 4,
+        }
+      default:
+        return {
+          backgroundColor: '#fff',
+          borderLeftColor: '#e9ecef',
+          borderLeftWidth: 4,
+        }
+    }
+  }
+
+  const getTaskIconStyle = (status: string) => {
+    switch (status) {
+      case 'completed': return { backgroundColor: '#d4edda' }
+      case 'pending': return { backgroundColor: '#fff3cd' }
+      case 'transfer_requested': return { backgroundColor: '#e2e3ff' }
+      default: return { backgroundColor: '#f8f9fa' }
+    }
+  }
+
+  const getPriorityColor = (dueDate: string | null) => {
+    if (!dueDate) return { backgroundColor: '#e9ecef' }
+
+    const due = new Date(dueDate)
+    const now = new Date()
+    const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+
+    if (diffDays < 0) return { backgroundColor: '#dc3545' } // Overdue - red
+    if (diffDays <= 1) return { backgroundColor: '#fd7e14' } // Due soon - orange
+    if (diffDays <= 3) return { backgroundColor: '#ffc107' } // Due this week - yellow
+    return { backgroundColor: '#28a745' } // Future - green
+  }
+
+  const isOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false
+    return new Date(dueDate) < new Date()
+  }
+
+  const getEmptyStateIcon = (filter: FilterType) => {
+    switch (filter) {
+      case 'all': return '📋'
+      case 'pending': return '⏳'
+      case 'assigned': return '👤'
+      case 'completed': return '✅'
+      default: return '📋'
+    }
+  }
+
+  const getEmptyStateTitle = (filter: FilterType) => {
+    switch (filter) {
+      case 'all': return 'No tasks yet'
+      case 'pending': return 'No pending tasks'
+      case 'assigned': return 'No assigned tasks'
+      case 'completed': return 'No completed tasks'
+      default: return 'No tasks found'
+    }
+  }
+
+  const getEmptyStateMessage = (filter: FilterType) => {
+    switch (filter) {
+      case 'all': return 'Create your first task to get started with household management'
+      case 'pending': return 'All caught up! No pending tasks at the moment'
+      case 'assigned': return 'No tasks are currently assigned to you'
+      case 'completed': return 'Complete some tasks to see them here'
+      default: return 'Try adjusting your search or filter'
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -230,110 +319,189 @@ export default function TaskListScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.title}>📋 Tasks</Text>
-          <Text style={styles.subtitle}>
-            {tasks.length} total • {tasks.filter(t => t.status === 'completed').length} completed
-          </Text>
+      {/* Enhanced Header with Gradient */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerGradient}>
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.title}>📋 Tasks</Text>
+                <Text style={styles.subtitle}>
+                  {tasks.length} total • {tasks.filter(t => t.status === 'completed').length} completed
+                </Text>
+                <View style={styles.progressBar}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      { width: `${tasks.length > 0 ? (tasks.filter(t => t.status === 'completed').length / tasks.length) * 100 : 0}%` }
+                    ]}
+                  />
+                </View>
+              </View>
+              <View style={styles.headerRight}>
+                <TouchableOpacity
+                  style={styles.sortButton}
+                  onPress={() => {
+                    // Toggle sort order
+                    const sortedTasks = [...tasks].reverse()
+                    setTasks(sortedTasks)
+                  }}
+                >
+                  <Text style={styles.sortButtonText}>🔄</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => router.push('/(app)/tasks/create')}
+                >
+                  <Text style={styles.addButtonText}>+ Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </View>
-        <View style={styles.headerRight}>
+      </View>
+
+      {/* Enhanced Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search tasks..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearSearchButton}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={styles.clearSearchText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Enhanced Filter Buttons */}
+      <View style={styles.filterSection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContainer}
+        >
           <TouchableOpacity
-            style={styles.sortButton}
-            onPress={() => {
-              // Toggle sort order
-              const sortedTasks = [...tasks].reverse()
-              setTasks(sortedTasks)
-            }}
+            style={[
+              styles.filterButton,
+              filter === 'all' && styles.activeFilter,
+              styles.filterButtonAll
+            ]}
+            onPress={() => setFilter('all')}
           >
-            <Text style={styles.sortButtonText}>🔄</Text>
+            <View style={styles.filterButtonContent}>
+              <Text style={styles.filterEmoji}>📋</Text>
+              <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
+                All
+              </Text>
+              <Text style={[styles.filterCount, filter === 'all' && styles.activeFilterCount]}>
+                {tasks.length}
+              </Text>
+            </View>
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={styles.addButton}
+            style={[
+              styles.filterButton,
+              filter === 'pending' && styles.activeFilter,
+              styles.filterButtonPending
+            ]}
+            onPress={() => setFilter('pending')}
+          >
+            <View style={styles.filterButtonContent}>
+              <Text style={styles.filterEmoji}>⏳</Text>
+              <Text style={[styles.filterText, filter === 'pending' && styles.activeFilterText]}>
+                Pending
+              </Text>
+              <Text style={[styles.filterCount, filter === 'pending' && styles.activeFilterCount]}>
+                {tasks.filter(t => t.status === 'pending' || !t.status).length}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filter === 'assigned' && styles.activeFilter,
+              styles.filterButtonAssigned
+            ]}
+            onPress={() => setFilter('assigned')}
+          >
+            <View style={styles.filterButtonContent}>
+              <Text style={styles.filterEmoji}>👤</Text>
+              <Text style={[styles.filterText, filter === 'assigned' && styles.activeFilterText]}>
+                Assigned
+              </Text>
+              <Text style={[styles.filterCount, filter === 'assigned' && styles.activeFilterCount]}>
+                {tasks.filter(t => t.assignee_id === user?.id).length}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              filter === 'completed' && styles.activeFilter,
+              styles.filterButtonCompleted
+            ]}
+            onPress={() => setFilter('completed')}
+          >
+            <View style={styles.filterButtonContent}>
+              <Text style={styles.filterEmoji}>✅</Text>
+              <Text style={[styles.filterText, filter === 'completed' && styles.activeFilterText]}>
+                Completed
+              </Text>
+              <Text style={[styles.filterCount, filter === 'completed' && styles.activeFilterCount]}>
+                {tasks.filter(t => t.status === 'completed').length}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+
+      {/* Enhanced Quick Actions */}
+      <View style={styles.quickActionsSection}>
+        <View style={styles.quickActionsContainer}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.quickActionPrimary]}
             onPress={() => router.push('/(app)/tasks/create')}
           >
-            <Text style={styles.addButtonText}>+ Add</Text>
+            <View style={styles.quickActionContent}>
+              <Text style={styles.quickActionIcon}>➕</Text>
+              <Text style={styles.quickActionText}>Quick Add</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionButton, styles.quickActionSecondary]}
+            onPress={() => {
+              // Mark all visible tasks as completed
+              Alert.alert(
+                'Mark All Complete',
+                `Mark all ${filteredTasks.length} visible tasks as completed?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Mark Complete', onPress: () => markAllComplete() }
+                ]
+              )
+            }}
+          >
+            <View style={styles.quickActionContent}>
+              <Text style={styles.quickActionIcon}>✅</Text>
+              <Text style={styles.quickActionText}>Complete All</Text>
+            </View>
           </TouchableOpacity>
         </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search tasks..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScrollView}
-        contentContainerStyle={styles.filterContainer}
-      >
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'all' && styles.activeFilter]}
-          onPress={() => setFilter('all')}
-        >
-          <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            📋 All ({tasks.length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'pending' && styles.activeFilter]}
-          onPress={() => setFilter('pending')}
-        >
-          <Text style={[styles.filterText, filter === 'pending' && styles.activeFilterText]}>
-            ⏳ Pending ({tasks.filter(t => t.status === 'pending' || !t.status).length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'assigned' && styles.activeFilter]}
-          onPress={() => setFilter('assigned')}
-        >
-          <Text style={[styles.filterText, filter === 'assigned' && styles.activeFilterText]}>
-            👤 Assigned ({tasks.filter(t => t.assignee_id === user?.id).length})
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.filterButton, filter === 'completed' && styles.activeFilter]}
-          onPress={() => setFilter('completed')}
-        >
-          <Text style={[styles.filterText, filter === 'completed' && styles.activeFilterText]}>
-            ✅ Completed ({tasks.filter(t => t.status === 'completed').length})
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Quick Actions */}
-      <View style={styles.quickActionsContainer}>
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => {
-            // Mark all visible tasks as completed
-            Alert.alert(
-              'Mark All Complete',
-              `Mark all ${filteredTasks.length} visible tasks as completed?`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Mark Complete', onPress: () => markAllComplete() }
-              ]
-            )
-          }}
-        >
-          <Text style={styles.quickActionText}>✅ Mark All Complete</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.quickActionButton}
-          onPress={() => router.push('/(app)/tasks/create')}
-        >
-          <Text style={styles.quickActionText}>➕ Quick Add</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -343,81 +511,132 @@ export default function TaskListScreen() {
         }
       >
         {filteredTasks.length > 0 ? (
-          filteredTasks.map((task) => (
+          filteredTasks.map((task, index) => (
             <TouchableOpacity
               key={task.id}
-              style={styles.taskCard}
+              style={[
+                styles.taskCard,
+                getTaskCardStyle(task.status),
+                {
+                  marginBottom: index === filteredTasks.length - 1 ? 20 : 16,
+                  transform: [{ scale: 1 }] // For potential animation
+                }
+              ]}
               onPress={() => handleTaskPress(task.id)}
+              activeOpacity={0.7}
             >
-              <View style={styles.taskHeader}>
-                <View style={styles.taskTitleRow}>
-                  {task.emoji && (
-                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
-                  )}
-                  <Text style={styles.taskTitle}>{task.title}</Text>
+              {/* Task Priority Indicator */}
+              <View style={[styles.priorityIndicator, getPriorityColor(task.due_date)]} />
+
+              <View style={styles.taskCardContent}>
+                <View style={styles.taskHeader}>
+                  <View style={styles.taskTitleRow}>
+                    {task.emoji ? (
+                      <Text style={styles.taskEmoji}>{task.emoji}</Text>
+                    ) : (
+                      <View style={[styles.defaultTaskIcon, getTaskIconStyle(task.status)]}>
+                        <Text style={styles.defaultTaskIconText}>
+                          {getStatusIcon(task.status)}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={styles.taskTitle} numberOfLines={2}>
+                      {task.title}
+                    </Text>
+                  </View>
+                  <View style={[styles.statusBadge, getStatusBadgeStyle(task.status)]}>
+                    <Text style={[styles.statusText, getStatusTextStyle(task.status)]}>
+                      {task.status.replace('_', ' ')}
+                    </Text>
+                  </View>
                 </View>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(task.status) },
-                  ]}
-                >
-                  <Text style={styles.statusText}>
-                    {task.status.replace('_', ' ')}
+
+                {task.description && (
+                  <Text style={styles.taskDescription} numberOfLines={2}>
+                    {task.description}
                   </Text>
+                )}
+
+                <View style={styles.taskMeta}>
+                  <View style={styles.taskInfo}>
+                    {task.due_date && (
+                      <View style={styles.dueDateContainer}>
+                        <Text style={styles.dueDateIcon}>📅</Text>
+                        <Text style={[
+                          styles.dueDateText,
+                          isOverdue(task.due_date) && styles.overdueDateText
+                        ]}>
+                          {formatDate(task.due_date)}
+                          {isOverdue(task.due_date) && ' (Overdue)'}
+                        </Text>
+                      </View>
+                    )}
+                    {task.recurrence && (
+                      <View style={styles.recurrenceContainer}>
+                        <Text style={styles.recurrenceIcon}>🔄</Text>
+                        <Text style={styles.recurrenceText}>
+                          {task.recurrence}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {task.status === 'pending' && task.assignee_id === user?.id && (
+                    <TouchableOpacity
+                      style={styles.quickCompleteButton}
+                      onPress={() => handleMarkComplete(task.id)}
+                    >
+                      <Text style={styles.quickCompleteText}>✓</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-              </View>
 
-              {task.description && (
-                <Text style={styles.taskDescription}>{task.description}</Text>
-              )}
-
-              <View style={styles.taskMeta}>
-                <View style={styles.taskInfo}>
-                  {task.assignee && (
-                    <Text style={styles.assigneeText}>
-                      Assigned to: {task.assignee.name}
-                    </Text>
-                  )}
-                  {task.due_date && (
-                    <Text style={styles.dueDateText}>
-                      Due: {formatDate(task.due_date)}
-                    </Text>
-                  )}
-                  {task.recurrence && (
-                    <Text style={styles.recurrenceText}>
-                      Repeats: {task.recurrence}
-                    </Text>
-                  )}
-                </View>
-
-                {task.status === 'pending' && task.assignee_id === user?.id && (
-                  <TouchableOpacity
-                    style={styles.completeButton}
-                    onPress={() => handleMarkComplete(task.id)}
-                  >
-                    <Text style={styles.completeButtonText}>Mark Done</Text>
-                  </TouchableOpacity>
+                {/* Progress indicator for recurring tasks */}
+                {task.recurrence && (
+                  <View style={styles.progressContainer}>
+                    <View style={styles.progressTrack}>
+                      <View style={[
+                        styles.progressBar,
+                        { width: task.status === 'completed' ? '100%' : '30%' }
+                      ]} />
+                    </View>
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
           ))
         ) : (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateTitle}>No tasks found</Text>
-            <Text style={styles.emptyStateText}>
-              {filter === 'all'
-                ? 'Create your first task to get started'
-                : `No ${filter} tasks found`}
-            </Text>
-            {filter === 'all' && (
-              <TouchableOpacity
-                style={styles.createTaskButton}
-                onPress={() => router.push('/(app)/tasks/create')}
-              >
-                <Text style={styles.createTaskButtonText}>Create Task</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.emptyStateContent}>
+              <Text style={styles.emptyStateIcon}>
+                {getEmptyStateIcon(filter)}
+              </Text>
+              <Text style={styles.emptyStateTitle}>
+                {getEmptyStateTitle(filter)}
+              </Text>
+              <Text style={styles.emptyStateText}>
+                {getEmptyStateMessage(filter)}
+              </Text>
+              {filter === 'all' && (
+                <TouchableOpacity
+                  style={styles.createTaskButton}
+                  onPress={() => router.push('/(app)/tasks/create')}
+                >
+                  <View style={styles.createTaskButtonContent}>
+                    <Text style={styles.createTaskButtonIcon}>✨</Text>
+                    <Text style={styles.createTaskButtonText}>Create Your First Task</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+              {filter !== 'all' && (
+                <TouchableOpacity
+                  style={styles.viewAllTasksButton}
+                  onPress={() => setFilter('all')}
+                >
+                  <Text style={styles.viewAllTasksButtonText}>View All Tasks</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         )}
       </ScrollView>
@@ -430,123 +649,339 @@ export default function TaskListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8fafc',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  // Enhanced Header Styles
+  headerContainer: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerGradient: {
+    backgroundColor: '#667eea',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#667eea',
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flex: 1,
+    marginRight: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  sortButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sortButtonText: {
+    fontSize: 18,
   },
   addButton: {
     backgroundColor: '#667eea',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 16,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
+  // Enhanced Search Styles
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 20,
+    marginTop: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  searchIcon: {
+    fontSize: 18,
+    color: '#64748b',
+    marginRight: 12,
   },
   searchInput: {
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    flex: 1,
     fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    color: '#1e293b',
+    paddingVertical: 12,
+    fontWeight: '500',
+  },
+  clearSearchButton: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  clearSearchText: {
+    fontSize: 16,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  // Enhanced Filter Styles
+  filterSection: {
+    marginBottom: 20,
   },
   filterScrollView: {
-    marginBottom: 15,
+    paddingVertical: 4,
   },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    gap: 8,
+    gap: 12,
   },
   filterButton: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    paddingVertical: 12,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    minWidth: 90,
   },
-  activeFilter: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+  filterButtonContent: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  filterEmoji: {
+    fontSize: 16,
   },
   filterText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  filterCount: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  activeFilter: {
+    borderColor: '#667eea',
+    backgroundColor: '#f1f5f9',
+    transform: [{ scale: 1.05 }],
   },
   activeFilterText: {
+    color: '#667eea',
+  },
+  activeFilterCount: {
+    color: '#667eea',
+  },
+  filterButtonAll: {
+    borderColor: '#64748b',
+  },
+  filterButtonPending: {
+    borderColor: '#f59e0b',
+  },
+  filterButtonAssigned: {
+    borderColor: '#8b5cf6',
+  },
+  filterButtonCompleted: {
+    borderColor: '#10b981',
+  },
+  // Enhanced Quick Actions Styles
+  quickActionsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  quickActionPrimary: {
+    backgroundColor: '#667eea',
+  },
+  quickActionSecondary: {
+    backgroundColor: '#10b981',
+  },
+  quickActionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickActionIcon: {
+    fontSize: 18,
     color: '#fff',
   },
+  quickActionText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 0.5,
+  },
+  // Enhanced Task List Styles
   taskList: {
     flex: 1,
     paddingHorizontal: 20,
   },
+  // Enhanced Task Card Styles
   taskCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: '#f1f5f9',
+  },
+  priorityIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+  },
+  taskCardContent: {
+    padding: 20,
   },
   taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  taskTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  taskEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  defaultTaskIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  defaultTaskIconText: {
+    fontSize: 16,
   },
   taskTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1e293b',
     flex: 1,
-    marginRight: 10,
+    lineHeight: 24,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
+    borderWidth: 1,
   },
   statusText: {
     fontSize: 12,
-    color: '#fff',
-    fontWeight: '500',
+    fontWeight: '700',
     textTransform: 'capitalize',
+    letterSpacing: 0.5,
   },
   taskDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-    lineHeight: 20,
+    fontSize: 15,
+    color: '#64748b',
+    marginBottom: 16,
+    lineHeight: 22,
+    fontWeight: '500',
   },
   taskMeta: {
     flexDirection: 'row',
@@ -555,112 +990,140 @@ const styles = StyleSheet.create({
   },
   taskInfo: {
     flex: 1,
+    gap: 8,
   },
-  assigneeText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+  dueDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dueDateIcon: {
+    fontSize: 14,
   },
   dueDateText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
-  },
-  recurrenceText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  completeButton: {
-    backgroundColor: '#28a745',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  completeButtonText: {
-    color: '#fff',
-    fontSize: 12,
+    fontSize: 13,
+    color: '#64748b',
     fontWeight: '600',
   },
-  emptyState: {
+  overdueDateText: {
+    color: '#dc2626',
+    fontWeight: '700',
+  },
+  recurrenceContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 40,
+    gap: 6,
+  },
+  recurrenceIcon: {
+    fontSize: 14,
+  },
+  recurrenceText: {
+    fontSize: 13,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  quickCompleteButton: {
+    backgroundColor: '#10b981',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickCompleteText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  progressContainer: {
+    marginTop: 12,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: 3,
+  },
+  // Enhanced Empty State Styles
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyStateContent: {
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+    opacity: 0.8,
   },
   emptyStateTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 12,
+    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 32,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   createTaskButton: {
     backgroundColor: '#667eea',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 20,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  createTaskButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  createTaskButtonIcon: {
+    fontSize: 18,
+    color: '#fff',
   },
   createTaskButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  // bottomActions and shuffle button styles removed
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  taskEmoji: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  // New styles for enhanced features
-  headerLeft: {
-    flex: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 2,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sortButton: {
-    backgroundColor: '#f8f9fa',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  sortButtonText: {
-    fontSize: 16,
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 15,
-    gap: 8,
-  },
-  quickActionButton: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+  viewAllTasksButton: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 24,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#667eea',
   },
-  quickActionText: {
-    fontSize: 14,
+  viewAllTasksButtonText: {
+    color: '#667eea',
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
   },
 })

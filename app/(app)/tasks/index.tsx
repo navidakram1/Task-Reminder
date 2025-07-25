@@ -286,15 +286,6 @@ export default function TaskListScreen() {
     }
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':

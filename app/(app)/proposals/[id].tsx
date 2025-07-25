@@ -54,42 +54,51 @@ export default function ProposalDetailsScreen() {
       // Fetch proposal details
       const { data: proposalData, error: proposalError } = await supabase
         .from('household_proposals')
-        .select(`
-          *,
-          profiles!created_by(name)
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
       if (proposalError) throw proposalError
 
+      // Get creator info
+      const { data: creator } = await supabase
+        .from('profiles')
+        .select('name')
+        .eq('id', proposalData.created_by)
+        .single()
+
       // Fetch all votes for this proposal
       const { data: votesData, error: votesError } = await supabase
         .from('proposal_votes')
-        .select(`
-          user_id,
-          vote,
-          created_at,
-          profiles(name)
-        `)
+        .select('user_id, vote, created_at')
         .eq('proposal_id', id)
         .order('created_at', { ascending: false })
 
       if (votesError) throw votesError
+
+      // Get voter names
+      const voterIds = votesData?.map(v => v.user_id) || []
+      const { data: voters } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', voterIds)
 
       // Find user's vote
       const userVote = votesData?.find(v => v.user_id === user.id)
 
       setProposal({
         ...proposalData,
-        creator_name: proposalData.profiles?.name || 'Unknown',
+        creator_name: creator?.name || 'Unknown',
         user_vote: userVote?.vote,
-        votes: votesData?.map(v => ({
-          user_id: v.user_id,
-          vote: v.vote,
-          created_at: v.created_at,
-          user_name: v.profiles?.name || 'Unknown'
-        })) || []
+        votes: votesData?.map(v => {
+          const voter = voters?.find(voter => voter.id === v.user_id)
+          return {
+            user_id: v.user_id,
+            vote: v.vote,
+            created_at: v.created_at,
+            user_name: voter?.name || 'Unknown'
+          }
+        }) || []
       })
     } catch (error) {
       console.error('Error fetching proposal details:', error)
@@ -109,12 +118,51 @@ export default function ProposalDetailsScreen() {
     if (!proposal) return
 
     try {
-      const { error } = await supabase.rpc('vote_on_proposal', {
-        p_proposal_id: proposal.id,
-        p_vote: vote
-      })
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('proposal_votes')
+        .select('id')
+        .eq('proposal_id', proposal.id)
+        .eq('user_id', user?.id)
+        .single()
 
-      if (error) throw error
+      if (existingVote) {
+        // Update existing vote
+        const { error } = await supabase
+          .from('proposal_votes')
+          .update({ vote })
+          .eq('id', existingVote.id)
+
+        if (error) throw error
+      } else {
+        // Insert new vote
+        const { error } = await supabase
+          .from('proposal_votes')
+          .insert({
+            proposal_id: proposal.id,
+            user_id: user?.id,
+            vote
+          })
+
+        if (error) throw error
+      }
+
+      // Update vote counts
+      const { data: votes } = await supabase
+        .from('proposal_votes')
+        .select('vote')
+        .eq('proposal_id', proposal.id)
+
+      const votesFor = votes?.filter(v => v.vote === 'for').length || 0
+      const votesAgainst = votes?.filter(v => v.vote === 'against').length || 0
+
+      await supabase
+        .from('household_proposals')
+        .update({
+          votes_for: votesFor,
+          votes_against: votesAgainst
+        })
+        .eq('id', proposal.id)
 
       Alert.alert('Success', `Your vote has been recorded!`)
       await fetchProposalDetails()

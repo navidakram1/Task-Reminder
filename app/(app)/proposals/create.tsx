@@ -62,14 +62,21 @@ export default function CreateProposalScreen() {
       const expiresAt = new Date()
       expiresAt.setHours(expiresAt.getHours() + durationHours)
 
-      // Create proposal
-      const { error } = await supabase.rpc('create_household_proposal', {
-        p_household_id: householdMember.household_id,
-        p_title: title.trim(),
-        p_description: description.trim(),
-        p_type: selectedType,
-        p_expires_at: expiresAt.toISOString()
-      })
+      // Create proposal directly
+      const { error } = await supabase
+        .from('household_proposals')
+        .insert({
+          household_id: householdMember.household_id,
+          title: title.trim(),
+          description: description.trim(),
+          type: selectedType,
+          created_by: user?.id,
+          expires_at: expiresAt.toISOString(),
+          status: 'active',
+          votes_for: 0,
+          votes_against: 0,
+          total_members: 1 // Will be updated by trigger or manually
+        })
 
       if (error) throw error
 

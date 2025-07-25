@@ -218,25 +218,41 @@ export default function HouseholdActivityScreen() {
 
       if (!householdMember) return
 
-      // Fetch proposals with creator info and user votes
+      // Fetch proposals
       const { data: proposalsData, error } = await supabase
         .from('household_proposals')
-        .select(`
-          *,
-          profiles!created_by(name),
-          proposal_votes!left(vote, user_id)
-        `)
+        .select('*')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
         .limit(10)
 
       if (error) throw error
 
-      const formattedProposals = proposalsData?.map(p => ({
-        ...p,
-        created_by_name: p.profiles?.name || 'Unknown',
-        user_vote: p.proposal_votes?.find((v: any) => v.user_id === user.id)?.vote
-      })) || []
+      // Get creator names for proposals
+      const creatorIds = [...new Set(proposalsData?.map(p => p.created_by) || [])]
+      const { data: creators } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', creatorIds)
+
+      // Get user votes for proposals
+      const proposalIds = proposalsData?.map(p => p.id) || []
+      const { data: userVotes } = await supabase
+        .from('proposal_votes')
+        .select('proposal_id, vote')
+        .eq('user_id', user.id)
+        .in('proposal_id', proposalIds)
+
+      const formattedProposals = (proposalsData || []).map(p => {
+        const creator = creators?.find(c => c.id === p.created_by)
+        const userVote = userVotes?.find(v => v.proposal_id === p.id)
+
+        return {
+          ...p,
+          created_by_name: creator?.name || 'Unknown',
+          user_vote: userVote?.vote
+        }
+      })
 
       setProposals(formattedProposals)
     } catch (error) {

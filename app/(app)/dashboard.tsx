@@ -99,23 +99,40 @@ export default function DashboardScreen() {
         console.error('Error fetching tasks:', tasksError)
       }
 
-      // Fetch pending transfer requests
-      const { data: transferRequests, error: transferError } = await supabase.rpc('get_pending_transfer_requests')
-
-      if (transferError) {
-        console.error('Error fetching transfer requests:', transferError)
+      // Fetch pending transfer requests (gracefully handle if function doesn't exist)
+      let transferRequests = []
+      try {
+        const { data, error } = await supabase.rpc('get_pending_transfer_requests')
+        if (error) {
+          console.error('Error fetching transfer requests:', error)
+          transferRequests = []
+        } else {
+          transferRequests = data || []
+        }
+      } catch (error) {
+        console.error('Transfer requests function not available:', error)
+        transferRequests = []
       }
 
-      // Fetch recent bills (simplified query)
-      const { data: bills, error: billsError } = await supabase
-        .from('bills')
-        .select('id, title, amount, category, date, paid_by, created_at')
-        .eq('household_id', householdId)
-        .order('created_at', { ascending: false })
-        .limit(5)
+      // Fetch recent bills (gracefully handle if table doesn't exist)
+      let bills = []
+      try {
+        const { data, error } = await supabase
+          .from('bills')
+          .select('id, title, amount, category, date, paid_by, created_at')
+          .eq('household_id', householdId)
+          .order('created_at', { ascending: false })
+          .limit(5)
 
-      if (billsError) {
-        console.error('Error fetching bills:', billsError)
+        if (error) {
+          console.error('Error fetching bills:', error)
+          bills = []
+        } else {
+          bills = data || []
+        }
+      } catch (error) {
+        console.error('Bills table not available:', error)
+        bills = []
       }
 
       console.log('About to setData with:', {
@@ -170,7 +187,7 @@ export default function DashboardScreen() {
     switch (status) {
       case 'completed': return { backgroundColor: '#d4edda', borderColor: '#c3e6cb' }
       case 'pending': return { backgroundColor: '#fff3cd', borderColor: '#ffeaa7' }
-      case 'awaiting_approval': return { backgroundColor: '#d1ecf1', borderColor: '#bee5eb' }
+      case 'transfer_requested': return { backgroundColor: '#e2e3ff', borderColor: '#c5c6ff' }
       default: return { backgroundColor: '#f8f9fa', borderColor: '#dee2e6' }
     }
   }
@@ -179,7 +196,7 @@ export default function DashboardScreen() {
     switch (status) {
       case 'completed': return { color: '#155724' }
       case 'pending': return { color: '#856404' }
-      case 'awaiting_approval': return { color: '#0c5460' }
+      case 'transfer_requested': return { color: '#4c4dff' }
       default: return { color: '#6c757d' }
     }
   }
@@ -344,12 +361,12 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.guideCard}
-            onPress={() => router.push('/(app)/approvals')}
+            onPress={() => router.push('/(app)/household/transfer-requests')}
           >
-            <Text style={styles.guideIcon}>✅</Text>
+            <Text style={styles.guideIcon}>🔄</Text>
             <View style={styles.guideContent}>
-              <Text style={styles.guideTitle}>Approve Work</Text>
-              <Text style={styles.guideDescription}>Review and approve completed tasks</Text>
+              <Text style={styles.guideTitle}>Transfer Requests</Text>
+              <Text style={styles.guideDescription}>Manage task transfer requests</Text>
             </View>
             <Text style={styles.guideArrow}>→</Text>
           </TouchableOpacity>
@@ -663,35 +680,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3cd',
     color: '#856404',
   },
-  status_awaiting_approval: {
-    backgroundColor: '#d1ecf1',
-    color: '#0c5460',
-  },
-  approvalCard: {
-    backgroundColor: '#fff3cd',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  approvalInfo: {
-    flex: 1,
-  },
-  approvalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  approvalDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  approvalActions: {
-    flexDirection: 'row',
-    gap: 8,
+  status_transfer_requested: {
+    backgroundColor: '#e2e3ff',
+    color: '#4c4dff',
   },
   approveButton: {
     backgroundColor: '#28a745',

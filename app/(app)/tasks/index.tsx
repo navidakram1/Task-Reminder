@@ -183,7 +183,8 @@ export default function TaskListScreen() {
     }
   }
 
-  const isOverdue = (dueDate: string) => {
+  const isOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false
     return new Date(dueDate) < new Date()
   }
 
@@ -253,10 +254,7 @@ export default function TaskListScreen() {
     return { backgroundColor: '#28a745' } // Future - green
   }
 
-  const isOverdue = (dueDate: string | null) => {
-    if (!dueDate) return false
-    return new Date(dueDate) < new Date()
-  }
+  // Duplicate isOverdue function removed
 
   const getEmptyStateIcon = (filter: FilterType) => {
     switch (filter) {

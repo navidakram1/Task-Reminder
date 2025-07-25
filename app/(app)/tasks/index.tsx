@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
+    Alert,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -12,7 +13,7 @@ import {
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
-type FilterType = 'all' | 'assigned' | 'completed'
+type FilterType = 'all' | 'assigned' | 'pending' | 'completed'
 
 export default function TaskListScreen() {
   const [tasks, setTasks] = useState<any[]>([])
@@ -47,24 +48,16 @@ export default function TaskListScreen() {
         return
       }
 
-      // Fetch tasks
+      // Fetch tasks with simplified query to avoid foreign key issues
       const { data, error } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          assignee:assignee_id (
-            id,
-            name
-          ),
-          creator:created_by (
-            id,
-            name
-          )
-        `)
+        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
+      console.log('Fetched tasks:', data?.length || 0)
+      console.log('Sample task:', data?.[0])
       setTasks(data || [])
     } catch (error) {
       console.error('Error fetching tasks:', error)
@@ -75,14 +68,26 @@ export default function TaskListScreen() {
 
   const filterTasks = () => {
     let filtered = tasks
+    console.log('Filtering tasks:', { totalTasks: tasks.length, filter, searchQuery })
 
     // Apply filter
     switch (filter) {
       case 'assigned':
-        filtered = tasks.filter(task => task.assignee_id === user?.id)
+        filtered = tasks.filter(task => {
+          const isAssigned = task.assignee_id === user?.id
+          console.log('Task assigned check:', { taskId: task.id, assigneeId: task.assignee_id, userId: user?.id, isAssigned })
+          return isAssigned
+        })
         break
       case 'completed':
-        filtered = tasks.filter(task => task.status === 'completed')
+        filtered = tasks.filter(task => {
+          const isCompleted = task.status === 'completed'
+          console.log('Task completed check:', { taskId: task.id, status: task.status, isCompleted })
+          return isCompleted
+        })
+        break
+      case 'pending':
+        filtered = tasks.filter(task => task.status === 'pending' || !task.status)
         break
       default:
         filtered = tasks
@@ -96,6 +101,7 @@ export default function TaskListScreen() {
       )
     }
 
+    console.log('Filtered result:', { filteredCount: filtered.length })
     setFilteredTasks(filtered)
   }
 
@@ -103,6 +109,75 @@ export default function TaskListScreen() {
     setRefreshing(true)
     await fetchTasks()
     setRefreshing(false)
+  }
+
+  const markAllComplete = async () => {
+    try {
+      const taskIds = filteredTasks
+        .filter(task => task.status !== 'completed')
+        .map(task => task.id)
+
+      if (taskIds.length === 0) {
+        Alert.alert('Info', 'All visible tasks are already completed!')
+        return
+      }
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: 'completed' })
+        .in('id', taskIds)
+
+      if (error) throw error
+
+      Alert.alert('Success', `Marked ${taskIds.length} tasks as completed!`)
+      await fetchTasks()
+    } catch (error) {
+      console.error('Error marking tasks complete:', error)
+      Alert.alert('Error', 'Failed to mark tasks as completed')
+    }
+  }
+
+  const markTaskComplete = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: 'completed' })
+        .eq('id', taskId)
+
+      if (error) throw error
+
+      await fetchTasks()
+    } catch (error) {
+      console.error('Error marking task complete:', error)
+      Alert.alert('Error', 'Failed to mark task as completed')
+    }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed': return '✅'
+      case 'pending': return '⏳'
+      case 'awaiting_approval': return '👀'
+      default: return '📋'
+    }
+  }
+
+  const getStatusBadgeStyle = (status: string) => {
+    switch (status) {
+      case 'completed': return { backgroundColor: '#d4edda', borderColor: '#c3e6cb' }
+      case 'pending': return { backgroundColor: '#fff3cd', borderColor: '#ffeaa7' }
+      case 'awaiting_approval': return { backgroundColor: '#d1ecf1', borderColor: '#bee5eb' }
+      default: return { backgroundColor: '#f8f9fa', borderColor: '#dee2e6' }
+    }
+  }
+
+  const getStatusTextStyle = (status: string) => {
+    switch (status) {
+      case 'completed': return { color: '#155724' }
+      case 'pending': return { color: '#856404' }
+      case 'awaiting_approval': return { color: '#0c5460' }
+      default: return { color: '#6c757d' }
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -156,13 +231,30 @@ export default function TaskListScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Tasks</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/(app)/tasks/create')}
-        >
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>📋 Tasks</Text>
+          <Text style={styles.subtitle}>
+            {tasks.length} total • {tasks.filter(t => t.status === 'completed').length} completed
+          </Text>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={() => {
+              // Toggle sort order
+              const sortedTasks = [...tasks].reverse()
+              setTasks(sortedTasks)
+            }}
+          >
+            <Text style={styles.sortButtonText}>🔄</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('/(app)/tasks/create')}
+          >
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -174,13 +266,27 @@ export default function TaskListScreen() {
         />
       </View>
 
-      <View style={styles.filterContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollView}
+        contentContainerStyle={styles.filterContainer}
+      >
         <TouchableOpacity
           style={[styles.filterButton, filter === 'all' && styles.activeFilter]}
           onPress={() => setFilter('all')}
         >
           <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-            All ({tasks.length})
+            📋 All ({tasks.length})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterButton, filter === 'pending' && styles.activeFilter]}
+          onPress={() => setFilter('pending')}
+        >
+          <Text style={[styles.filterText, filter === 'pending' && styles.activeFilterText]}>
+            ⏳ Pending ({tasks.filter(t => t.status === 'pending' || !t.status).length})
           </Text>
         </TouchableOpacity>
 
@@ -189,7 +295,7 @@ export default function TaskListScreen() {
           onPress={() => setFilter('assigned')}
         >
           <Text style={[styles.filterText, filter === 'assigned' && styles.activeFilterText]}>
-            Assigned ({tasks.filter(t => t.assignee_id === user?.id).length})
+            👤 Assigned ({tasks.filter(t => t.assignee_id === user?.id).length})
           </Text>
         </TouchableOpacity>
 
@@ -198,8 +304,35 @@ export default function TaskListScreen() {
           onPress={() => setFilter('completed')}
         >
           <Text style={[styles.filterText, filter === 'completed' && styles.activeFilterText]}>
-            Completed ({tasks.filter(t => t.status === 'completed').length})
+            ✅ Completed ({tasks.filter(t => t.status === 'completed').length})
           </Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActionsContainer}>
+        <TouchableOpacity
+          style={styles.quickActionButton}
+          onPress={() => {
+            // Mark all visible tasks as completed
+            Alert.alert(
+              'Mark All Complete',
+              `Mark all ${filteredTasks.length} visible tasks as completed?`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Mark Complete', onPress: () => markAllComplete() }
+              ]
+            )
+          }}
+        >
+          <Text style={styles.quickActionText}>✅ Mark All Complete</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionButton}
+          onPress={() => router.push('/(app)/tasks/create')}
+        >
+          <Text style={styles.quickActionText}>➕ Quick Add</Text>
         </TouchableOpacity>
       </View>
 
@@ -345,10 +478,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
+  filterScrollView: {
+    marginBottom: 15,
+  },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 15,
     gap: 8,
   },
   filterButton: {
@@ -481,5 +616,51 @@ const styles = StyleSheet.create({
   taskEmoji: {
     fontSize: 18,
     marginRight: 8,
+  },
+  // New styles for enhanced features
+  headerLeft: {
+    flex: 1,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  sortButton: {
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  sortButtonText: {
+    fontSize: 16,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    marginBottom: 15,
+    gap: 8,
+  },
+  quickActionButton: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
   },
 })

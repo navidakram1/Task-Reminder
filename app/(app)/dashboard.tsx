@@ -327,12 +327,13 @@ export default function DashboardScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
       <View style={styles.header}>
         <View style={styles.welcomeSection}>
           <View style={styles.welcomeContent}>
@@ -730,80 +731,80 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
 
-    {/* Household Switcher Modal */}
-    <Modal
-      visible={showHouseholdModal}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={() => setShowHouseholdModal(false)}
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
-            <Text style={styles.modalCloseButton}>✕</Text>
-          </TouchableOpacity>
-          <Text style={styles.modalTitle}>Switch Household</Text>
-          <TouchableOpacity onPress={() => {
-            setShowHouseholdModal(false)
-            router.push('/(onboarding)/create-join-household')
-          }}>
-            <Text style={styles.modalAddButton}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView style={styles.modalContent}>
-          {households.map((household) => (
-            <TouchableOpacity
-              key={household.id}
-              style={[
-                styles.householdOption,
-                household.is_active && styles.householdOptionActive
-              ]}
-              onPress={() => switchHousehold(household)}
-              disabled={switchingHousehold}
-            >
-              <View style={styles.householdOptionLeft}>
-                <Text style={styles.householdOptionIcon}>
-                  {household.type === 'group' ? '👥' : '🏠'}
-                </Text>
-                <View style={styles.householdOptionInfo}>
-                  <Text style={[
-                    styles.householdOptionName,
-                    household.is_active && styles.householdOptionNameActive
-                  ]}>
-                    {household.name}
-                  </Text>
-                  <Text style={styles.householdOptionMeta}>
-                    {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
-                  </Text>
-                </View>
-              </View>
-              {household.is_active && (
-                <Text style={styles.activeIndicator}>✓</Text>
-              )}
+      {/* Household Switcher Modal */}
+      <Modal
+        visible={showHouseholdModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowHouseholdModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
             </TouchableOpacity>
-          ))}
+            <Text style={styles.modalTitle}>Switch Household</Text>
+            <TouchableOpacity onPress={() => {
+              setShowHouseholdModal(false)
+              router.push('/(onboarding)/create-join-household')
+            }}>
+              <Text style={styles.modalAddButton}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
 
-          {households.length === 0 && (
-            <View style={styles.emptyHouseholds}>
-              <Text style={styles.emptyHouseholdsText}>No households found</Text>
+          <ScrollView style={styles.modalContent}>
+            {households.map((household) => (
               <TouchableOpacity
-                style={styles.createFirstHouseholdButton}
-                onPress={() => {
-                  setShowHouseholdModal(false)
-                  router.push('/(onboarding)/create-join-household')
-                }}
+                key={household.id}
+                style={[
+                  styles.householdOption,
+                  household.is_active && styles.householdOptionActive
+                ]}
+                onPress={() => switchHousehold(household)}
+                disabled={switchingHousehold}
               >
-                <Text style={styles.createFirstHouseholdButtonText}>Create Your First Household</Text>
+                <View style={styles.householdOptionLeft}>
+                  <Text style={styles.householdOptionIcon}>
+                    {household.type === 'group' ? '👥' : '🏠'}
+                  </Text>
+                  <View style={styles.householdOptionInfo}>
+                    <Text style={[
+                      styles.householdOptionName,
+                      household.is_active && styles.householdOptionNameActive
+                    ]}>
+                      {household.name}
+                    </Text>
+                    <Text style={styles.householdOptionMeta}>
+                      {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
+                    </Text>
+                  </View>
+                </View>
+                {household.is_active && (
+                  <Text style={styles.activeIndicator}>✓</Text>
+                )}
               </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
-  </View>
+            ))}
+
+            {households.length === 0 && (
+              <View style={styles.emptyHouseholds}>
+                <Text style={styles.emptyHouseholdsText}>No households found</Text>
+                <TouchableOpacity
+                  style={styles.createFirstHouseholdButton}
+                  onPress={() => {
+                    setShowHouseholdModal(false)
+                    router.push('/(onboarding)/create-join-household')
+                  }}
+                >
+                  <Text style={styles.createFirstHouseholdButtonText}>Create Your First Household</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
+    </View>
   )
 }
 
@@ -811,6 +812,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,

@@ -50,6 +50,15 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="proposals"
+        options={{
+          title: 'Proposals',
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 20, color }}>🗳️</Text>
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="approvals"
         options={{
           title: 'Approvals',

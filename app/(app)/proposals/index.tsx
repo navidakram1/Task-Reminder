@@ -298,6 +298,38 @@ export default function ProposalsScreen() {
                       styles.voteAgainstButton,
                       proposal.user_vote === 'against' && styles.votedButton
                     ]}
+                    onPress={() => handleVote(proposal.id, 'against')}
+                  >
+                    <Text style={[
+                      styles.voteButtonText,
+                      proposal.user_vote === 'against' && styles.votedButtonText
+                    ]}>
+                      👎 {proposal.user_vote === 'against' ? 'Voted Against' : 'Vote Against'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>🗳️</Text>
+            <Text style={styles.emptyStateTitle}>No Proposals Yet</Text>
+            <Text style={styles.emptyStateText}>
+              Create the first proposal to start democratic decision-making in your household
+            </Text>
+            <TouchableOpacity
+              style={styles.createProposalButton}
+              onPress={() => router.push('/(app)/proposals/create')}
+            >
+              <Text style={styles.createProposalButtonText}>✨ Create First Proposal</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -535,35 +567,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 })
-                    onPress={() => handleVote(proposal.id, 'against')}
-                  >
-                    <Text style={[
-                      styles.voteButtonText,
-                      proposal.user_vote === 'against' && styles.votedButtonText
-                    ]}>
-                      👎 {proposal.user_vote === 'against' ? 'Voted Against' : 'Vote Against'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>🗳️</Text>
-            <Text style={styles.emptyStateTitle}>No Proposals Yet</Text>
-            <Text style={styles.emptyStateText}>
-              Create the first proposal to start democratic decision-making in your household
-            </Text>
-            <TouchableOpacity
-              style={styles.createProposalButton}
-              onPress={() => router.push('/(app)/proposals/create')}
-            >
-              <Text style={styles.createProposalButtonText}>✨ Create First Proposal</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  )
-}

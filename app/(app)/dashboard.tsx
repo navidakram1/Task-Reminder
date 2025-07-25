@@ -235,12 +235,18 @@ export default function DashboardScreen() {
     >
       <View style={styles.header}>
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
-          <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
-            weekday: 'long',
-            month: 'long',
-            day: 'numeric'
-          })}</Text>
+          <View style={styles.welcomeContent}>
+            <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
+            <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
+            })}</Text>
+          </View>
+          <View style={styles.weatherWidget}>
+            <Text style={styles.weatherIcon}>☀️</Text>
+            <Text style={styles.weatherTemp}>72°</Text>
+          </View>
         </View>
 
         {/* Enhanced Household Card with Gradient */}
@@ -250,27 +256,40 @@ export default function DashboardScreen() {
         >
           <View style={styles.householdCardGradient}>
             <View style={styles.householdInfo}>
-              <Text style={styles.householdName}>🏡 {data.household.name}</Text>
+              <View style={styles.householdHeader}>
+                <Text style={styles.householdName}>🏡 {data.household.name}</Text>
+                <View style={styles.householdBadge}>
+                  <Text style={styles.badgeText}>Active</Text>
+                </View>
+              </View>
               <Text style={styles.activityHint}>✨ Tap to view recent activity</Text>
               <View style={styles.householdStats}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{data.upcomingTasks.length}</Text>
+                  <View style={styles.statCircle}>
+                    <Text style={styles.statNumber}>{data.upcomingTasks.length}</Text>
+                  </View>
                   <Text style={styles.statLabel}>Tasks</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{data.recentBills.length}</Text>
+                  <View style={styles.statCircle}>
+                    <Text style={styles.statNumber}>{data.recentBills.length}</Text>
+                  </View>
                   <Text style={styles.statLabel}>Bills</Text>
                 </View>
                 <View style={styles.statDivider} />
                 <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{data.pendingTransfers.length}</Text>
+                  <View style={styles.statCircle}>
+                    <Text style={styles.statNumber}>{data.pendingTransfers.length}</Text>
+                  </View>
                   <Text style={styles.statLabel}>Transfers</Text>
                 </View>
               </View>
             </View>
             <View style={styles.householdIcon}>
-              <Text style={styles.householdIconText}>→</Text>
+              <View style={styles.arrowCircle}>
+                <Text style={styles.householdIconText}>→</Text>
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -283,28 +302,33 @@ export default function DashboardScreen() {
           <TouchableOpacity
             style={[styles.quickActionCard, styles.primaryAction]}
             onPress={() => router.push('/(app)/tasks/create')}
+            activeOpacity={0.8}
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>📋</Text>
             </View>
             <Text style={styles.actionTitle}>Create Task</Text>
             <Text style={styles.actionSubtitle}>Add new chore</Text>
+            <View style={styles.actionGlow} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.secondaryAction]}
             onPress={() => router.push('/(app)/bills/create')}
+            activeOpacity={0.8}
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>💰</Text>
             </View>
             <Text style={styles.actionTitle}>Add Bill</Text>
             <Text style={styles.actionSubtitle}>Split expense</Text>
+            <View style={styles.actionGlow} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.tertiaryAction]}
             onPress={() => router.push('/(app)/household/transfer-requests')}
+            activeOpacity={0.8}
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>🔄</Text>
@@ -313,23 +337,57 @@ export default function DashboardScreen() {
             <Text style={styles.actionSubtitle}>
               {data.pendingTransfers.length > 0 ? `${data.pendingTransfers.length} pending` : 'No requests'}
             </Text>
+            <View style={styles.actionGlow} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.quaternaryAction]}
             onPress={() => router.push('/(app)/household/members')}
+            activeOpacity={0.8}
           >
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>👥</Text>
             </View>
             <Text style={styles.actionTitle}>Members</Text>
             <Text style={styles.actionSubtitle}>Manage team</Text>
+            <View style={styles.actionGlow} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Feature Slider - Temporarily commented out for debugging */}
-      {/* <FeatureSlider /> */}
+      {/* Enhanced Feature Slider */}
+      <View style={styles.featureSliderContainer}>
+        <Text style={styles.sectionTitle}>✨ Discover Features</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.featureSlider}
+        >
+          <View style={[styles.featureCard, styles.featureCard1]}>
+            <Text style={styles.featureIcon}>🎯</Text>
+            <Text style={styles.featureTitle}>Smart Task Assignment</Text>
+            <Text style={styles.featureDescription}>Auto-shuffle chores fairly among household members</Text>
+          </View>
+
+          <View style={[styles.featureCard, styles.featureCard2]}>
+            <Text style={styles.featureIcon}>💰</Text>
+            <Text style={styles.featureTitle}>Bill Splitting</Text>
+            <Text style={styles.featureDescription}>Split expenses easily with custom amounts and tracking</Text>
+          </View>
+
+          <View style={[styles.featureCard, styles.featureCard3]}>
+            <Text style={styles.featureIcon}>🔔</Text>
+            <Text style={styles.featureTitle}>Smart Reminders</Text>
+            <Text style={styles.featureDescription}>Never miss a task with push and email notifications</Text>
+          </View>
+
+          <View style={[styles.featureCard, styles.featureCard4]}>
+            <Text style={styles.featureIcon}>✅</Text>
+            <Text style={styles.featureTitle}>Task Approval</Text>
+            <Text style={styles.featureDescription}>Verify completed tasks with photo proof</Text>
+          </View>
+        </ScrollView>
+      </View>
 
       {/* Navigation Guide */}
       <View style={styles.section}>
@@ -338,37 +396,52 @@ export default function DashboardScreen() {
           <TouchableOpacity
             style={styles.guideCard}
             onPress={() => router.push('/(app)/tasks')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.guideIcon}>📋</Text>
+            <View style={styles.guideIconContainer}>
+              <Text style={styles.guideIcon}>📋</Text>
+            </View>
             <View style={styles.guideContent}>
               <Text style={styles.guideTitle}>Manage Tasks</Text>
               <Text style={styles.guideDescription}>View, create, and complete household chores</Text>
             </View>
-            <Text style={styles.guideArrow}>→</Text>
+            <View style={styles.guideArrowContainer}>
+              <Text style={styles.guideArrow}>→</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.guideCard}
             onPress={() => router.push('/(app)/bills')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.guideIcon}>💰</Text>
+            <View style={styles.guideIconContainer}>
+              <Text style={styles.guideIcon}>💰</Text>
+            </View>
             <View style={styles.guideContent}>
               <Text style={styles.guideTitle}>Split Bills</Text>
               <Text style={styles.guideDescription}>Add expenses and track who owes what</Text>
             </View>
-            <Text style={styles.guideArrow}>→</Text>
+            <View style={styles.guideArrowContainer}>
+              <Text style={styles.guideArrow}>→</Text>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.guideCard}
             onPress={() => router.push('/(app)/household/transfer-requests')}
+            activeOpacity={0.8}
           >
-            <Text style={styles.guideIcon}>🔄</Text>
+            <View style={styles.guideIconContainer}>
+              <Text style={styles.guideIcon}>🔄</Text>
+            </View>
             <View style={styles.guideContent}>
               <Text style={styles.guideTitle}>Transfer Requests</Text>
               <Text style={styles.guideDescription}>Manage task transfer requests</Text>
             </View>
-            <Text style={styles.guideArrow}>→</Text>
+            <View style={styles.guideArrowContainer}>
+              <Text style={styles.guideArrow}>→</Text>
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -535,7 +608,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   welcomeSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  welcomeContent: {
+    flex: 1,
   },
   welcomeText: {
     fontSize: 28,
@@ -547,17 +626,105 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
+  weatherWidget: {
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  weatherIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  weatherTemp: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
   householdCard: {
     backgroundColor: '#667eea',
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 16,
     elevation: 8,
+    marginBottom: 20,
+  },
+  householdCardGradient: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: '#667eea',
+  },
+  householdHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  householdBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  householdStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#e8eaff',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#8a9cff',
+    marginHorizontal: 16,
+  },
+  arrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   householdInfo: {
     flex: 1,
@@ -768,16 +935,27 @@ const styles = StyleSheet.create({
   quickActionCard: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
     flex: 1,
     minWidth: '45%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 4,
     borderWidth: 2,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  actionGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+    opacity: 0.1,
   },
   primaryAction: {
     borderColor: '#667eea',
@@ -796,16 +974,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8feff',
   },
   actionIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionIcon: {
-    fontSize: 24,
+    fontSize: 28,
   },
   actionTitle: {
     fontSize: 16,
@@ -819,27 +1002,96 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+
+  // Feature Slider Styles
+  featureSliderContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  featureSlider: {
+    paddingRight: 20,
+  },
+  featureCard: {
+    width: 200,
+    padding: 20,
+    borderRadius: 20,
+    marginRight: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  featureCard1: {
+    backgroundColor: '#fff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+  },
+  featureCard2: {
+    backgroundColor: '#fff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#4caf50',
+  },
+  featureCard3: {
+    backgroundColor: '#fff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff9800',
+  },
+  featureCard4: {
+    backgroundColor: '#fff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#9c27b0',
+  },
+  featureIcon: {
+    fontSize: 32,
+    marginBottom: 12,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
   // Guide Section Styles
   guideContainer: {
     gap: 12,
   },
   guideCard: {
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e9ecef',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+  },
+  guideIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8faff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
   guideIcon: {
     fontSize: 24,
-    marginRight: 16,
   },
   guideContent: {
     flex: 1,
@@ -855,9 +1107,17 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
+  guideArrowContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   guideArrow: {
-    fontSize: 18,
-    color: '#667eea',
+    fontSize: 16,
+    color: '#fff',
     fontWeight: 'bold',
   },
   // Status Badge Styles

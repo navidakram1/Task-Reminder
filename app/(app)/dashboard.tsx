@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import HouseholdSwitcher from '../../components/HouseholdSwitcherSimple'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
@@ -274,8 +275,8 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Feature Slider */}
-      <FeatureSlider />
+      {/* Feature Slider - Temporarily commented out for debugging */}
+      {/* <FeatureSlider /> */}
 
       {/* Navigation Guide */}
       <View style={styles.section}>

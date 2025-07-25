@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Alert,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 interface DebtSummary {
   userId: string
@@ -44,33 +44,72 @@ export default function SettleUpScreen() {
 
       if (!householdMember) return
 
-      // Fetch all unsettled bill splits in the household
-      const { data: splits, error } = await supabase
+      // Fetch all bills in the household first
+      const { data: householdBills } = await supabase
+        .from('bills')
+        .select('id')
+        .eq('household_id', householdMember.household_id)
+
+      if (!householdBills || householdBills.length === 0) {
+        setUnsettledSplits([])
+        setDebtSummaries([])
+        return
+      }
+
+      const billIds = householdBills.map(bill => bill.id)
+
+      // Fetch all unsettled bill splits for these bills
+      const { data: splitsData, error } = await supabase
         .from('bill_splits')
-        .select(`
-          *,
-          bills (
-            id,
-            title,
-            household_id,
-            paid_by,
-            paid_by_user:paid_by (
-              id,
-              name
-            )
-          ),
-          profiles (
-            id,
-            name
-          )
-        `)
+        .select('*')
         .eq('status', 'owed')
-        .eq('bills.household_id', householdMember.household_id)
+        .in('bill_id', billIds)
 
       if (error) throw error
 
-      setUnsettledSplits(splits || [])
-      calculateDebtSummaries(splits || [])
+      if (!splitsData || splitsData.length === 0) {
+        setUnsettledSplits([])
+        setDebtSummaries([])
+        return
+      }
+
+      // Get bill details
+      const { data: billsData } = await supabase
+        .from('bills')
+        .select('*')
+        .in('id', billIds)
+
+      // Get all user profiles involved
+      const userIds = [
+        ...new Set([
+          ...splitsData.map(split => split.user_id),
+          ...billsData?.map(bill => bill.paid_by) || []
+        ])
+      ]
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', userIds)
+
+      // Enrich splits with bill and profile data
+      const enrichedSplits = splitsData.map(split => {
+        const bill = billsData?.find(b => b.id === split.bill_id)
+        const profile = profiles?.find(p => p.id === split.user_id)
+        const paidByUser = profiles?.find(p => p.id === bill?.paid_by)
+
+        return {
+          ...split,
+          bills: bill ? {
+            ...bill,
+            paid_by_user: paidByUser
+          } : null,
+          profiles: profile
+        }
+      })
+
+      setUnsettledSplits(enrichedSplits)
+      calculateDebtSummaries(enrichedSplits)
     } catch (error) {
       console.error('Error fetching settlement data:', error)
     } finally {

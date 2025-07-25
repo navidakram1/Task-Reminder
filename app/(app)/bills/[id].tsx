@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  Image,
-} from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 export default function BillDetailsScreen() {
   const { id } = useLocalSearchParams()
@@ -30,36 +30,53 @@ export default function BillDetailsScreen() {
       // Fetch bill details
       const { data: billData, error: billError } = await supabase
         .from('bills')
-        .select(`
-          *,
-          paid_by_user:paid_by (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
       if (billError) throw billError
-      setBill(billData)
+
+      // Get paid by user info
+      const { data: paidByUser } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .eq('id', billData.paid_by)
+        .single()
+
+      setBill({
+        ...billData,
+        paid_by_user: paidByUser
+      })
 
       // Fetch bill splits
       const { data: splitsData, error: splitsError } = await supabase
         .from('bill_splits')
-        .select(`
-          *,
-          profiles (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('*')
         .eq('bill_id', id)
         .order('amount', { ascending: false })
 
       if (splitsError) throw splitsError
-      setSplits(splitsData || [])
+
+      if (splitsData && splitsData.length > 0) {
+        // Get profiles for split users
+        const splitUserIds = splitsData.map(split => split.user_id)
+        const { data: splitProfiles } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', splitUserIds)
+
+        const enrichedSplits = splitsData.map(split => {
+          const profile = splitProfiles?.find(p => p.id === split.user_id)
+          return {
+            ...split,
+            profiles: profile
+          }
+        })
+
+        setSplits(enrichedSplits)
+      } else {
+        setSplits([])
+      }
     } catch (error) {
       console.error('Error fetching bill details:', error)
       Alert.alert('Error', 'Failed to load bill details')

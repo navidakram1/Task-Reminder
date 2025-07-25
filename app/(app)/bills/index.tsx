@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  TextInput,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
 type FilterType = 'all' | 'unsettled' | 'settled'
 
@@ -47,32 +47,64 @@ export default function BillListScreen() {
         return
       }
 
-      // Fetch bills with splits
-      const { data, error } = await supabase
+      // Fetch bills
+      const { data: billsData, error } = await supabase
         .from('bills')
-        .select(`
-          *,
-          paid_by_user:paid_by (
-            id,
-            name
-          ),
-          bill_splits (
-            id,
-            user_id,
-            amount,
-            status,
-            settled_at,
-            profiles (
-              id,
-              name
-            )
-          )
-        `)
+        .select('*')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      setBills(data || [])
+
+      if (!billsData || billsData.length === 0) {
+        setBills([])
+        return
+      }
+
+      // Get all user IDs from bills
+      const userIds = [...new Set(billsData.map(bill => bill.paid_by))]
+
+      // Fetch user profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', userIds)
+
+      // Fetch bill splits
+      const billIds = billsData.map(bill => bill.id)
+      const { data: splitsData } = await supabase
+        .from('bill_splits')
+        .select('*')
+        .in('bill_id', billIds)
+
+      // Get split user profiles
+      const splitUserIds = [...new Set(splitsData?.map(split => split.user_id) || [])]
+      const { data: splitProfiles } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .in('id', splitUserIds)
+
+      // Combine data
+      const enrichedBills = billsData.map(bill => {
+        const paidByUser = profiles?.find(p => p.id === bill.paid_by)
+        const billSplits = splitsData?.filter(split => split.bill_id === bill.id) || []
+
+        const enrichedSplits = billSplits.map(split => {
+          const profile = splitProfiles?.find(p => p.id === split.user_id)
+          return {
+            ...split,
+            profiles: profile
+          }
+        })
+
+        return {
+          ...bill,
+          paid_by_user: paidByUser,
+          bill_splits: enrichedSplits
+        }
+      })
+
+      setBills(enrichedBills)
     } catch (error) {
       console.error('Error fetching bills:', error)
     } finally {
@@ -169,13 +201,42 @@ export default function BillListScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Bills</Text>
+      {/* Enhanced Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerGradient}>
+          <View style={styles.header}>
+            <View style={styles.headerContent}>
+              <Text style={styles.title}>💰 Bills & Expenses</Text>
+              <Text style={styles.subtitle}>
+                {bills.length} bills • {bills.filter(b => b.bill_splits?.some(s => s.status === 'owed')).length} pending
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push('/(app)/bills/create')}
+            >
+              <Text style={styles.addButtonIcon}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Quick Actions */}
+      <View style={styles.quickActionsContainer}>
         <TouchableOpacity
-          style={styles.addButton}
+          style={styles.quickActionButton}
+          onPress={() => router.push('/(app)/bills/settle-up')}
+        >
+          <Text style={styles.quickActionIcon}>🤝</Text>
+          <Text style={styles.quickActionText}>Settle Up</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickActionButton}
           onPress={() => router.push('/(app)/bills/create')}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={styles.quickActionIcon}>➕</Text>
+          <Text style={styles.quickActionText}>Add Bill</Text>
         </TouchableOpacity>
       </View>
 
@@ -319,40 +380,105 @@ export default function BillListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8faff',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8faff',
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: '#64748b',
+    fontWeight: '500',
+  },
+
+  // Enhanced Header Styles
+  headerContainer: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  headerGradient: {
+    backgroundColor: '#667eea',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#667eea',
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
   },
   addButton: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  addButtonText: {
+  addButtonIcon: {
+    fontSize: 24,
     color: '#fff',
+    fontWeight: '300',
+  },
+
+  // Quick Actions Styles
+  quickActionsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    gap: 8,
+  },
+  quickActionIcon: {
     fontSize: 16,
+    color: '#667eea',
+  },
+  quickActionText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#667eea',
   },
   searchContainer: {
     paddingHorizontal: 20,

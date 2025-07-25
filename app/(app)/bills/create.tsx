@@ -93,17 +93,28 @@ export default function CreateEditBillScreen() {
       // Get all household members
       const { data: members } = await supabase
         .from('household_members')
-        .select(`
-          user_id,
-          profiles (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('user_id')
         .eq('household_id', householdMember.household_id)
 
-      setHouseholdMembers(members || [])
+      if (members && members.length > 0) {
+        // Get profiles for these users
+        const userIds = members.map(m => m.user_id)
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', userIds)
+
+        // Combine data
+        const enrichedMembers = members.map(member => {
+          const profile = profiles?.find(p => p.id === member.user_id)
+          return {
+            user_id: member.user_id,
+            profiles: profile
+          }
+        })
+
+        setHouseholdMembers(enrichedMembers)
+      }
     } catch (error) {
       console.error('Error fetching household members:', error)
     }
@@ -131,22 +142,30 @@ export default function CreateEditBillScreen() {
       // Fetch existing splits
       const { data: splitsData, error: splitsError } = await supabase
         .from('bill_splits')
-        .select(`
-          *,
-          profiles (
-            id,
-            name
-          )
-        `)
+        .select('*')
         .eq('bill_id', edit)
 
       if (splitsError) throw splitsError
 
-      const existingSplits = (splitsData || []).map(split => ({
-        userId: split.user_id,
-        userName: split.profiles?.name || 'Unknown',
-        amount: split.amount,
-      }))
+      if (splitsData && splitsData.length > 0) {
+        // Get profiles for split users
+        const splitUserIds = splitsData.map(split => split.user_id)
+        const { data: splitProfiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', splitUserIds)
+
+        const existingSplits = splitsData.map(split => {
+          const profile = splitProfiles?.find(p => p.id === split.user_id)
+          return {
+            userId: split.user_id,
+            userName: profile?.name || 'Unknown',
+            amount: split.amount,
+          }
+        })
+
+        setSplits(existingSplits)
+      }
 
       setSplits(existingSplits)
     } catch (error) {

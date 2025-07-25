@@ -14,7 +14,7 @@ import { supabase } from '../../lib/supabase'
 
 interface DashboardData {
   upcomingTasks: any[]
-  pendingApprovals: any[]
+  pendingTransfers: any[]
   recentBills: any[]
   household: any
 }
@@ -22,7 +22,7 @@ interface DashboardData {
 export default function DashboardScreen() {
   const [data, setData] = useState<DashboardData>({
     upcomingTasks: [],
-    pendingApprovals: [],
+    pendingTransfers: [],
     recentBills: [],
     household: null,
   })
@@ -99,15 +99,11 @@ export default function DashboardScreen() {
         console.error('Error fetching tasks:', tasksError)
       }
 
-      // Fetch pending approvals (simplified query)
-      const { data: approvals, error: approvalsError } = await supabase
-        .from('task_approvals')
-        .select('id, task_id, status, submitted_by, created_at')
-        .eq('status', 'pending')
-        .limit(5)
+      // Fetch pending transfer requests
+      const { data: transferRequests, error: transferError } = await supabase.rpc('get_pending_transfer_requests')
 
-      if (approvalsError) {
-        console.error('Error fetching approvals:', approvalsError)
+      if (transferError) {
+        console.error('Error fetching transfer requests:', transferError)
       }
 
       // Fetch recent bills (simplified query)
@@ -124,14 +120,14 @@ export default function DashboardScreen() {
 
       console.log('About to setData with:', {
         upcomingTasks: tasks?.length || 0,
-        pendingApprovals: approvals?.length || 0,
+        pendingTransfers: transferRequests?.length || 0,
         recentBills: bills?.length || 0,
         household: householdData?.name || 'No household'
       })
 
       setData({
         upcomingTasks: tasks || [],
-        pendingApprovals: approvals || [],
+        pendingTransfers: transferRequests || [],
         recentBills: bills || [],
         household: {
           ...householdData,
@@ -280,13 +276,15 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.tertiaryAction]}
-            onPress={() => router.push('/(app)/approvals')}
+            onPress={() => router.push('/(app)/household/transfer-requests')}
           >
             <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>✅</Text>
+              <Text style={styles.actionIcon}>🔄</Text>
             </View>
-            <Text style={styles.actionTitle}>Approvals</Text>
-            <Text style={styles.actionSubtitle}>Review tasks</Text>
+            <Text style={styles.actionTitle}>Transfers</Text>
+            <Text style={styles.actionSubtitle}>
+              {data.pendingTransfers.length > 0 ? `${data.pendingTransfers.length} pending` : 'No requests'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -391,32 +389,30 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      {data.pendingApprovals.length > 0 && (
+      {data.pendingTransfers.length > 0 && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>✅ Pending Approvals</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/approvals')}>
+            <Text style={styles.sectionTitle}>🔄 Transfer Requests</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/household/transfer-requests')}>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
 
-          {data.pendingApprovals.map((approval) => (
+          {data.pendingTransfers.slice(0, 3).map((request: any) => (
             <TouchableOpacity
-              key={approval.id}
-              style={styles.approvalCard}
-              onPress={() => router.push(`/(app)/approvals/${approval.id}`)}
+              key={request.transfer_id}
+              style={styles.transferCard}
+              onPress={() => router.push('/(app)/household/transfer-requests')}
             >
-              <View style={styles.approvalInfo}>
-                <Text style={styles.approvalTitle}>{approval.tasks?.title}</Text>
-                <Text style={styles.approvalDescription}>Waiting for approval</Text>
+              <View style={styles.transferInfo}>
+                <Text style={styles.transferTitle}>📋 {request.task_title}</Text>
+                <Text style={styles.transferFrom}>From: {request.from_user_name}</Text>
+                <Text style={styles.transferDate}>
+                  📅 {new Date(request.created_at).toLocaleDateString()}
+                </Text>
               </View>
-              <View style={styles.approvalActions}>
-                <TouchableOpacity style={styles.approveButton}>
-                  <Text style={styles.approveButtonText}>✓</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.rejectButton}>
-                  <Text style={styles.rejectButtonText}>✗</Text>
-                </TouchableOpacity>
+              <View style={styles.transferActions}>
+                <Text style={styles.transferActionText}>Respond →</Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -895,5 +891,44 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Transfer Card Styles
+  transferCard: {
+    backgroundColor: '#f8faff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e8f0fe',
+  },
+  transferInfo: {
+    flex: 1,
+  },
+  transferTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  transferFrom: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  transferDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  transferActions: {
+    alignItems: 'flex-end',
+  },
+  transferActionText: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '500',
   },
 })

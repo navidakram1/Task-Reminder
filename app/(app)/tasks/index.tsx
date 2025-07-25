@@ -157,7 +157,7 @@ export default function TaskListScreen() {
     switch (status) {
       case 'completed': return '✅'
       case 'pending': return '⏳'
-      case 'awaiting_approval': return '👀'
+      case 'transfer_requested': return '🔄'
       default: return '📋'
     }
   }
@@ -166,7 +166,7 @@ export default function TaskListScreen() {
     switch (status) {
       case 'completed': return { backgroundColor: '#d4edda', borderColor: '#c3e6cb' }
       case 'pending': return { backgroundColor: '#fff3cd', borderColor: '#ffeaa7' }
-      case 'awaiting_approval': return { backgroundColor: '#d1ecf1', borderColor: '#bee5eb' }
+      case 'transfer_requested': return { backgroundColor: '#e2e3ff', borderColor: '#c5c6ff' }
       default: return { backgroundColor: '#f8f9fa', borderColor: '#dee2e6' }
     }
   }
@@ -175,7 +175,7 @@ export default function TaskListScreen() {
     switch (status) {
       case 'completed': return { color: '#155724' }
       case 'pending': return { color: '#856404' }
-      case 'awaiting_approval': return { color: '#0c5460' }
+      case 'transfer_requested': return { color: '#4c4dff' }
       default: return { color: '#6c757d' }
     }
   }
@@ -210,7 +210,7 @@ export default function TaskListScreen() {
     try {
       const { error } = await supabase
         .from('tasks')
-        .update({ status: 'awaiting_approval' })
+        .update({ status: 'completed' })
         .eq('id', taskId)
 
       if (error) throw error

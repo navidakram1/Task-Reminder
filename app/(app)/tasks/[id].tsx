@@ -2,12 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
-    Image,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
@@ -15,7 +14,8 @@ import { supabase } from '../../../lib/supabase'
 export default function TaskDetailsScreen() {
   const { id } = useLocalSearchParams()
   const [task, setTask] = useState<any>(null)
-  const [approval, setApproval] = useState<any>(null)
+  const [householdMembers, setHouseholdMembers] = useState<any[]>([])
+  const [transferRequests, setTransferRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
 
@@ -27,50 +27,54 @@ export default function TaskDetailsScreen() {
 
   const fetchTaskDetails = async () => {
     try {
-      // Fetch task details
+      // Fetch task details with simplified query
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
-        .select(`
-          *,
-          assignee:assignee_id (
-            id,
-            name,
-            email
-          ),
-          creator:created_by (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single()
 
       if (taskError) throw taskError
       setTask(taskData)
 
-      // Fetch approval if task is awaiting approval
-      if (taskData.status === 'awaiting_approval') {
-        const { data: approvalData } = await supabase
-          .from('task_approvals')
+      // Fetch household members
+      if (taskData?.household_id) {
+        const { data: members } = await supabase
+          .from('household_members')
           .select(`
-            *,
-            submitted_by_user:submitted_by (
+            user_id,
+            role,
+            profiles (
               id,
-              name
-            ),
-            reviewed_by_user:reviewed_by (
-              id,
-              name
+              name,
+              email
             )
           `)
-          .eq('task_id', id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+          .eq('household_id', taskData.household_id)
 
-        setApproval(approvalData)
+        setHouseholdMembers(members || [])
       }
+
+      // Fetch transfer requests for this task
+      const { data: transfers } = await supabase
+        .from('task_transfer_requests')
+        .select(`
+          *,
+          from_user:from_user_id (
+            name,
+            email
+          ),
+          to_user:to_user_id (
+            name,
+            email
+          )
+        `)
+        .eq('task_id', id)
+        .order('created_at', { ascending: false })
+
+      setTransferRequests(transfers || [])
+
+      // Approval system removed
     } catch (error) {
       console.error('Error fetching task details:', error)
       Alert.alert('Error', 'Failed to load task details')
@@ -83,50 +87,7 @@ export default function TaskDetailsScreen() {
     if (!task) return
 
     try {
-      // Update task status
-      const { error: taskError } = await supabase
-        .from('tasks')
-        .update({ status: 'awaiting_approval' })
-        .eq('id', task.id)
-
-      if (taskError) throw taskError
-
-      // Create approval record
-      const { error: approvalError } = await supabase
-        .from('task_approvals')
-        .insert({
-          task_id: task.id,
-          submitted_by: user?.id,
-          status: 'pending',
-        })
-
-      if (approvalError) throw approvalError
-
-      Alert.alert('Success', 'Task marked as complete and sent for approval')
-      await fetchTaskDetails()
-    } catch (error) {
-      console.error('Error marking task complete:', error)
-      Alert.alert('Error', 'Failed to mark task as complete')
-    }
-  }
-
-  const handleApprove = async () => {
-    if (!approval) return
-
-    try {
-      // Update approval status
-      const { error: approvalError } = await supabase
-        .from('task_approvals')
-        .update({
-          status: 'approved',
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', approval.id)
-
-      if (approvalError) throw approvalError
-
-      // Update task status
+      // Update task status to completed (no approval needed)
       const { error: taskError } = await supabase
         .from('tasks')
         .update({ status: 'completed' })
@@ -134,57 +95,75 @@ export default function TaskDetailsScreen() {
 
       if (taskError) throw taskError
 
-      Alert.alert('Success', 'Task approved successfully')
+      Alert.alert('Success', 'Task marked as complete!')
       await fetchTaskDetails()
     } catch (error) {
-      console.error('Error approving task:', error)
-      Alert.alert('Error', 'Failed to approve task')
+      console.error('Error marking task complete:', error)
+      Alert.alert('Error', 'Failed to mark task as complete')
     }
   }
 
-  const handleReject = async () => {
-    if (!approval) return
-
-    Alert.alert(
-      'Reject Task',
-      'Are you sure you want to reject this task completion?',
+  const handleTransferRequest = (toUserId: string, toUserName: string) => {
+    Alert.prompt(
+      'Transfer Task',
+      `Transfer this task to ${toUserName}? Add an optional message:`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reject',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Update approval status
-              const { error: approvalError } = await supabase
-                .from('task_approvals')
-                .update({
-                  status: 'rejected',
-                  reviewed_by: user?.id,
-                  reviewed_at: new Date().toISOString(),
-                })
-                .eq('id', approval.id)
-
-              if (approvalError) throw approvalError
-
-              // Update task status back to pending
-              const { error: taskError } = await supabase
-                .from('tasks')
-                .update({ status: 'pending' })
-                .eq('id', task.id)
-
-              if (taskError) throw taskError
-
-              Alert.alert('Task Rejected', 'Task has been rejected and marked as pending')
-              await fetchTaskDetails()
-            } catch (error) {
-              console.error('Error rejecting task:', error)
-              Alert.alert('Error', 'Failed to reject task')
-            }
-          },
-        },
-      ]
+          text: 'Transfer',
+          onPress: (message) => createTransferRequest(toUserId, message || '')
+        }
+      ],
+      'plain-text',
+      '',
+      'default'
     )
+  }
+
+  const createTransferRequest = async (toUserId: string, message: string) => {
+    try {
+      const { data, error } = await supabase.rpc('create_task_transfer_request', {
+        p_task_id: id,
+        p_to_user_id: toUserId,
+        p_message: message
+      })
+
+      if (error) throw error
+
+      Alert.alert('Success', 'Transfer request sent!')
+      await fetchTaskDetails()
+    } catch (error) {
+      console.error('Error creating transfer request:', error)
+      Alert.alert('Error', error.message || 'Failed to create transfer request')
+    }
+  }
+
+  const handleTransferResponse = async (transferId: string, response: 'accepted' | 'rejected') => {
+    try {
+      const { error } = await supabase.rpc('respond_to_task_transfer', {
+        p_transfer_id: transferId,
+        p_response: response
+      })
+
+      if (error) throw error
+
+      Alert.alert('Success', `Transfer request ${response}!`)
+      await fetchTaskDetails()
+    } catch (error) {
+      console.error('Error responding to transfer:', error)
+      Alert.alert('Error', error.message || 'Failed to respond to transfer request')
+    }
+  }
+
+  // Approval functions removed - using direct completion now
+
+  const getTransferStatusStyle = (status: string) => {
+    switch (status) {
+      case 'accepted': return { backgroundColor: '#d4edda', borderColor: '#c3e6cb' }
+      case 'rejected': return { backgroundColor: '#f8d7da', borderColor: '#f5c6cb' }
+      case 'pending': return { backgroundColor: '#fff3cd', borderColor: '#ffeaa7' }
+      default: return { backgroundColor: '#f8f9fa', borderColor: '#dee2e6' }
+    }
   }
 
   const handleEdit = () => {
@@ -265,7 +244,6 @@ export default function TaskDetailsScreen() {
 
   const isAssignee = task.assignee_id === user?.id
   const isCreator = task.created_by === user?.id
-  const canApprove = task.status === 'awaiting_approval' && !isAssignee
 
   return (
     <ScrollView style={styles.container}>
@@ -350,40 +328,7 @@ export default function TaskDetailsScreen() {
           </View>
         </View>
 
-        {approval && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Approval Status</Text>
-            
-            <View style={styles.approvalCard}>
-              <Text style={styles.approvalText}>
-                Submitted by {approval.submitted_by_user?.name} for approval
-              </Text>
-              
-              {approval.proof_photo_url && (
-                <Image
-                  source={{ uri: approval.proof_photo_url }}
-                  style={styles.proofImage}
-                />
-              )}
-
-              {approval.status === 'approved' && approval.reviewed_by_user && (
-                <Text style={styles.approvalResult}>
-                  ✅ Approved by {approval.reviewed_by_user.name}
-                </Text>
-              )}
-
-              {approval.status === 'rejected' && approval.reviewed_by_user && (
-                <Text style={styles.approvalResult}>
-                  ❌ Rejected by {approval.reviewed_by_user.name}
-                </Text>
-              )}
-
-              {approval.comments && (
-                <Text style={styles.approvalComments}>{approval.comments}</Text>
-              )}
-            </View>
-          </View>
-        )}
+        {/* Approval section removed */}
 
         <View style={styles.actions}>
           {task.status === 'pending' && isAssignee && (
@@ -391,25 +336,78 @@ export default function TaskDetailsScreen() {
               style={styles.completeButton}
               onPress={handleMarkComplete}
             >
-              <Text style={styles.completeButtonText}>Mark as Complete</Text>
+              <Text style={styles.completeButtonText}>✅ Mark as Complete</Text>
             </TouchableOpacity>
           )}
 
-          {canApprove && approval && (
-            <View style={styles.approvalActions}>
-              <TouchableOpacity
-                style={styles.approveButton}
-                onPress={handleApprove}
-              >
-                <Text style={styles.approveButtonText}>✓ Approve</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.rejectButton}
-                onPress={handleReject}
-              >
-                <Text style={styles.rejectButtonText}>✗ Reject</Text>
-              </TouchableOpacity>
+          {/* Transfer Task Section */}
+          {task.status === 'pending' && isAssignee && householdMembers.length > 1 && (
+            <View style={styles.transferSection}>
+              <Text style={styles.transferTitle}>🔄 Transfer Task</Text>
+              <Text style={styles.transferSubtitle}>Can't complete this task? Transfer it to someone else</Text>
+
+              <View style={styles.membersList}>
+                {householdMembers
+                  .filter(member => member.user_id !== user?.id)
+                  .map((member) => (
+                    <TouchableOpacity
+                      key={member.user_id}
+                      style={styles.memberButton}
+                      onPress={() => handleTransferRequest(member.user_id, member.profiles?.name || 'Unknown')}
+                    >
+                      <Text style={styles.memberName}>
+                        👤 {member.profiles?.name || member.profiles?.email || 'Unknown'}
+                      </Text>
+                      <Text style={styles.memberRole}>{member.role}</Text>
+                    </TouchableOpacity>
+                  ))}
+              </View>
+            </View>
+          )}
+
+          {/* Transfer Requests Section */}
+          {transferRequests.length > 0 && (
+            <View style={styles.transferRequestsSection}>
+              <Text style={styles.transferRequestsTitle}>📨 Transfer Requests</Text>
+
+              {transferRequests.map((request) => (
+                <View key={request.id} style={styles.transferRequestCard}>
+                  <View style={styles.transferRequestHeader}>
+                    <Text style={styles.transferRequestFrom}>
+                      From: {request.from_user?.name || 'Unknown'}
+                    </Text>
+                    <View style={[styles.statusBadge, getTransferStatusStyle(request.status)]}>
+                      <Text style={styles.statusText}>{request.status}</Text>
+                    </View>
+                  </View>
+
+                  {request.message && (
+                    <Text style={styles.transferMessage}>💬 "{request.message}"</Text>
+                  )}
+
+                  <Text style={styles.transferDate}>
+                    📅 {new Date(request.created_at).toLocaleDateString()}
+                  </Text>
+
+                  {request.status === 'pending' && request.to_user_id === user?.id && (
+                    <View style={styles.transferActions}>
+                      <TouchableOpacity
+                        style={styles.acceptButton}
+                        onPress={() => handleTransferResponse(request.id, 'accepted')}
+                      >
+                        <Text style={styles.acceptButtonText}>✅ Accept</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.rejectButton}
+                        onPress={() => handleTransferResponse(request.id, 'rejected')}
+                      >
+                        <Text style={styles.rejectButtonText}>❌ Reject</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
             </View>
           )}
         </View>
@@ -622,6 +620,111 @@ const styles = StyleSheet.create({
   rejectButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Transfer Section Styles
+  transferSection: {
+    backgroundColor: '#f8faff',
+    padding: 20,
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#e8f0fe',
+  },
+  transferTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  transferSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 16,
+  },
+  membersList: {
+    gap: 8,
+  },
+  memberButton: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  memberName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  memberRole: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  // Transfer Requests Styles
+  transferRequestsSection: {
+    marginTop: 20,
+  },
+  transferRequestsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  transferRequestCard: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  transferRequestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  transferRequestFrom: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  transferMessage: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
+  transferDate: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 12,
+  },
+  transferActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: '#28a745',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  acceptButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 })

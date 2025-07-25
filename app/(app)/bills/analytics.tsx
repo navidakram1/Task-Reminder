@@ -5,14 +5,22 @@ import {
     Dimensions,
     RefreshControl,
     ScrollView,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native'
-import { LineChart, PieChart, BarChart } from 'react-native-chart-kit'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
+// Conditional import for charts - will be available after npm install
+let LineChart: any, PieChart: any, BarChart: any
+try {
+  const chartKit = require('react-native-chart-kit')
+  LineChart = chartKit.LineChart
+  PieChart = chartKit.PieChart
+  BarChart = chartKit.BarChart
+} catch (error) {
+  console.log('Chart kit not installed yet - install with: npm install react-native-chart-kit react-native-svg')
+}
 
 interface SpendingAnalytics {
   category_name: string

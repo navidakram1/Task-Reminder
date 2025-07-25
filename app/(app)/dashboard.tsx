@@ -387,13 +387,20 @@ export default function DashboardScreen() {
         </View>
 
         {/* Enhanced Household Card with Dropdown */}
-        <View style={styles.householdCard}>
+        <TouchableOpacity
+          style={styles.householdCard}
+          onPress={() => router.push('/(app)/household/activity')}
+          activeOpacity={0.9}
+        >
           <View style={styles.householdCardGradient}>
             <View style={styles.householdInfo}>
               <View style={styles.householdHeader}>
                 <TouchableOpacity
                   style={styles.householdSelector}
-                  onPress={() => setShowHouseholdModal(true)}
+                  onPress={(e) => {
+                    e.stopPropagation()
+                    setShowHouseholdModal(true)
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.householdName}>🏡 {data.household.name}</Text>
@@ -434,7 +441,6 @@ export default function DashboardScreen() {
             </View>
           </View>
         </TouchableOpacity>
-      </View>
 
       {/* Quick Actions Grid */}
       <View style={styles.section}>

@@ -298,6 +298,57 @@ export default function ProposalDetailsScreen() {
                   proposal.user_vote === 'for' && styles.votedButtonText
                 ]}>
                   👍 {proposal.user_vote === 'for' ? 'You Voted For' : 'Vote For'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.voteButton,
+                  styles.voteAgainstButton,
+                  proposal.user_vote === 'against' && styles.votedButton
+                ]}
+                onPress={() => handleVote('against')}
+              >
+                <Text style={[
+                  styles.voteButtonText,
+                  proposal.user_vote === 'against' && styles.votedButtonText
+                ]}>
+                  👎 {proposal.user_vote === 'against' ? 'You Voted Against' : 'Vote Against'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Vote History */}
+        {proposal.votes && proposal.votes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📋 Vote History</Text>
+            {proposal.votes.map((vote, index) => (
+              <View key={index} style={styles.voteHistoryItem}>
+                <Text style={styles.voteHistoryIcon}>
+                  {vote.vote === 'for' ? '👍' : '👎'}
+                </Text>
+                <View style={styles.voteHistoryContent}>
+                  <Text style={styles.voteHistoryName}>{vote.user_name}</Text>
+                  <Text style={styles.voteHistoryTime}>
+                    {new Date(vote.created_at).toLocaleDateString()} at {new Date(vote.created_at).toLocaleTimeString()}
+                  </Text>
+                </View>
+                <Text style={[
+                  styles.voteHistoryBadge,
+                  { color: vote.vote === 'for' ? '#10b981' : '#ef4444' }
+                ]}>
+                  {vote.vote === 'for' ? 'For' : 'Against'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {

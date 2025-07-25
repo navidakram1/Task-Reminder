@@ -471,25 +471,23 @@ export default function TaskListScreen() {
       >
         {filteredTasks.length > 0 ? (
           filteredTasks.map((task, index) => (
-            <TouchableOpacity
+            <View
               key={task.id}
               style={[
                 styles.taskCard,
-                getTaskCardStyle(task.status),
-                {
-                  marginBottom: index === filteredTasks.length - 1 ? 20 : 16,
-                  transform: [{ scale: 1 }] // For potential animation
-                }
+                { marginBottom: index === filteredTasks.length - 1 ? 20 : 16 }
               ]}
-              onPress={() => handleTaskPress(task.id)}
-              activeOpacity={0.7}
             >
-              {/* Task Priority Indicator */}
+              {/* Priority Indicator */}
               <View style={[styles.priorityIndicator, getPriorityColor(task.due_date)]} />
 
-              <View style={styles.taskCardContent}>
+              <TouchableOpacity
+                style={styles.taskCardContent}
+                onPress={() => handleTaskPress(task.id)}
+                activeOpacity={0.8}
+              >
                 <View style={styles.taskHeader}>
-                  <View style={styles.taskTitleRow}>
+                  <View style={styles.taskIconContainer}>
                     {task.emoji ? (
                       <Text style={styles.taskEmoji}>{task.emoji}</Text>
                     ) : (
@@ -499,70 +497,65 @@ export default function TaskListScreen() {
                         </Text>
                       </View>
                     )}
-                    <Text style={styles.taskTitle} numberOfLines={2}>
-                      {task.title}
-                    </Text>
                   </View>
-                  <View style={[styles.statusBadge, getStatusBadgeStyle(task.status)]}>
-                    <Text style={[styles.statusText, getStatusTextStyle(task.status)]}>
-                      {task.status.replace('_', ' ')}
-                    </Text>
-                  </View>
-                </View>
 
-                {task.description && (
-                  <Text style={styles.taskDescription} numberOfLines={2}>
-                    {task.description}
-                  </Text>
-                )}
-
-                <View style={styles.taskMeta}>
-                  <View style={styles.taskInfo}>
-                    {task.due_date && (
-                      <View style={styles.dueDateContainer}>
-                        <Text style={styles.dueDateIcon}>📅</Text>
-                        <Text style={[
-                          styles.dueDateText,
-                          isOverdue(task.due_date) && styles.overdueDateText
-                        ]}>
-                          {formatDate(task.due_date)}
-                          {isOverdue(task.due_date) && ' (Overdue)'}
+                  <View style={styles.taskContent}>
+                    <View style={styles.taskTitleRow}>
+                      <Text style={styles.taskTitle} numberOfLines={2}>
+                        {task.title}
+                      </Text>
+                      <View style={[styles.statusBadge, getStatusBadgeStyle(task.status)]}>
+                        <Text style={[styles.statusText, getStatusTextStyle(task.status)]}>
+                          {task.status === 'pending' ? 'To Do' : task.status.replace('_', ' ')}
                         </Text>
                       </View>
+                    </View>
+
+                    {task.description && (
+                      <Text style={styles.taskDescription} numberOfLines={2}>
+                        {task.description}
+                      </Text>
                     )}
-                    {task.recurrence && (
-                      <View style={styles.recurrenceContainer}>
-                        <Text style={styles.recurrenceIcon}>🔄</Text>
-                        <Text style={styles.recurrenceText}>
-                          {task.recurrence}
-                        </Text>
+
+                    <View style={styles.taskMeta}>
+                      <View style={styles.taskInfo}>
+                        {task.due_date && (
+                          <View style={styles.dueDateContainer}>
+                            <Text style={styles.dueDateIcon}>📅</Text>
+                            <Text style={[
+                              styles.dueDateText,
+                              isOverdue(task.due_date) && styles.overdueDateText
+                            ]}>
+                              {formatDate(task.due_date)}
+                              {isOverdue(task.due_date) && ' (Overdue)'}
+                            </Text>
+                          </View>
+                        )}
+                        {task.recurrence && (
+                          <View style={styles.recurrenceContainer}>
+                            <Text style={styles.recurrenceIcon}>🔄</Text>
+                            <Text style={styles.recurrenceText}>
+                              {task.recurrence}
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                    )}
-                  </View>
-
-                  {task.status === 'pending' && task.assignee_id === user?.id && (
-                    <TouchableOpacity
-                      style={styles.quickCompleteButton}
-                      onPress={() => handleMarkComplete(task.id)}
-                    >
-                      <Text style={styles.quickCompleteText}>✓</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* Progress indicator for recurring tasks */}
-                {task.recurrence && (
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressTrack}>
-                      <View style={[
-                        styles.progressBar,
-                        { width: task.status === 'completed' ? '100%' : '30%' }
-                      ]} />
                     </View>
                   </View>
-                )}
-              </View>
-            </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+
+              {/* Quick Complete Button */}
+              {task.status === 'pending' && task.assignee_id === user?.id && (
+                <TouchableOpacity
+                  style={styles.quickCompleteButton}
+                  onPress={() => handleMarkComplete(task.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.quickCompleteIcon}>✓</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           ))
         ) : (
           <View style={styles.emptyState}>
@@ -621,7 +614,7 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontWeight: '500',
   },
-  // Enhanced Header Styles
+  // Modern Header Styles
   headerContainer: {
     backgroundColor: '#fff',
     shadowColor: '#000',
@@ -634,32 +627,33 @@ const styles = StyleSheet.create({
     backgroundColor: '#667eea',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: 60,
     paddingBottom: 20,
     paddingHorizontal: 20,
     backgroundColor: '#667eea',
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  headerLeft: {
     flex: 1,
     marginRight: 16,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '800',
     color: '#fff',
     marginBottom: 4,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
     marginBottom: 12,
+  },
+  progressContainer: {
+    marginTop: 8,
   },
   progressBar: {
     height: 4,
@@ -672,46 +666,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 2,
   },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  sortButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  sortButtonText: {
-    fontSize: 18,
-  },
   addButton: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 16,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  addButtonText: {
+  addButtonIcon: {
+    fontSize: 24,
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontWeight: '300',
   },
-  // Enhanced Search Styles
-  searchContainer: {
+  // Modern Search Styles
+  searchFilterContainer: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
     marginTop: 16,
   },
   searchInputContainer: {
@@ -750,78 +723,69 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontWeight: '600',
   },
-  // Enhanced Filter Styles
+  // Modern Filter Styles
   filterSection: {
     marginBottom: 20,
-  },
-  filterScrollView: {
-    paddingVertical: 4,
   },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
     gap: 12,
   },
-  filterButton: {
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 16,
+    borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 2,
+    paddingVertical: 10,
+    borderWidth: 1,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-    minWidth: 90,
+    gap: 8,
   },
-  filterButtonContent: {
-    alignItems: 'center',
-    gap: 4,
+  activeFilterChip: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
   },
-  filterEmoji: {
+  filterIcon: {
     fontSize: 16,
   },
-  filterText: {
-    fontSize: 13,
+  filterLabel: {
+    fontSize: 14,
     color: '#64748b',
     fontWeight: '600',
-    textAlign: 'center',
   },
-  filterCount: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '700',
-    textAlign: 'center',
+  activeFilterLabel: {
+    color: '#fff',
   },
-  activeFilter: {
-    borderColor: '#667eea',
+  filterBadge: {
     backgroundColor: '#f1f5f9',
-    transform: [{ scale: 1.05 }],
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    minWidth: 20,
+    alignItems: 'center',
   },
-  activeFilterText: {
-    color: '#667eea',
+  activeFilterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
-  activeFilterCount: {
-    color: '#667eea',
+  filterBadgeText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '700',
   },
-  filterButtonAll: {
-    borderColor: '#64748b',
+  activeFilterBadgeText: {
+    color: '#fff',
   },
-  filterButtonPending: {
-    borderColor: '#f59e0b',
-  },
-  filterButtonAssigned: {
-    borderColor: '#8b5cf6',
-  },
-  filterButtonCompleted: {
-    borderColor: '#10b981',
-  },
-  // Enhanced Quick Actions Styles
+  // Quick Actions Styles
   quickActionsSection: {
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   quickActionsContainer: {
     flexDirection: 'row',
@@ -829,81 +793,71 @@ const styles = StyleSheet.create({
   },
   quickActionButton: {
     flex: 1,
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  quickActionPrimary: {
-    backgroundColor: '#667eea',
-  },
-  quickActionSecondary: {
-    backgroundColor: '#10b981',
-  },
-  quickActionContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
     gap: 8,
   },
   quickActionIcon: {
-    fontSize: 18,
-    color: '#fff',
+    fontSize: 16,
+    color: '#667eea',
   },
   quickActionText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#667eea',
   },
   // Enhanced Task List Styles
   taskList: {
     flex: 1,
     paddingHorizontal: 20,
   },
-  // Enhanced Task Card Styles
+  // Modern Task Card Styles
   taskCard: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 16,
     marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    position: 'relative',
   },
   priorityIndicator: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 4,
+    height: 3,
+    zIndex: 1,
   },
   taskCardContent: {
-    padding: 20,
+    padding: 16,
   },
   taskHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
+  taskIconContainer: {
     marginRight: 12,
+    marginTop: 2,
   },
   taskEmoji: {
     fontSize: 24,
-    marginRight: 12,
   },
   defaultTaskIcon: {
     width: 32,
@@ -911,56 +865,67 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   defaultTaskIconText: {
     fontSize: 16,
   },
+  taskContent: {
+    flex: 1,
+  },
+  taskTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
   taskTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1e293b',
     flex: 1,
-    lineHeight: 24,
+    marginRight: 12,
+    lineHeight: 22,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
     letterSpacing: 0.5,
   },
   taskDescription: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#64748b',
-    marginBottom: 16,
-    lineHeight: 22,
+    marginBottom: 12,
+    lineHeight: 20,
     fontWeight: '500',
   },
   taskMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'center',
   },
   taskInfo: {
     flex: 1,
-    gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   dueDateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   dueDateIcon: {
-    fontSize: 14,
+    fontSize: 12,
   },
   dueDateText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
     fontWeight: '600',
   },
@@ -971,21 +936,24 @@ const styles = StyleSheet.create({
   recurrenceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   recurrenceIcon: {
-    fontSize: 14,
+    fontSize: 12,
   },
   recurrenceText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748b',
     fontWeight: '600',
   },
   quickCompleteButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
     backgroundColor: '#10b981',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#10b981',
@@ -993,25 +961,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
+    zIndex: 2,
   },
-  quickCompleteText: {
+  quickCompleteIcon: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
-  },
-  progressContainer: {
-    marginTop: 12,
-  },
-  progressTrack: {
-    height: 6,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#10b981',
-    borderRadius: 3,
   },
   // Enhanced Empty State Styles
   emptyState: {

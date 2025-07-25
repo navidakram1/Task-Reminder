@@ -1,37 +1,67 @@
+<<<<<<< HEAD
 import { createClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ftjhtxlpjchrobftmnei.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0amh0eGxwamNocm9iZnRtbmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODg3NTUsImV4cCI6MjA2ODk2NDc1NX0.nJQUFU7sPIUHRgUsd7Ij9wngew1WraNnPgPCULIO1Y4';
+let storage;
+if (Platform.OS === 'web') {
+  storage = undefined; // Supabase will use localStorage by default on web
+} else {
+  // Only import AsyncStorage on native
+  storage = require('@react-native-async-storage/async-storage').default;
+}
+=======
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { createClient } from '@supabase/supabase-js'
+import { Platform } from 'react-native'
+import 'react-native-url-polyfill/auto'
+>>>>>>> 8e42a40311900f9a3a085c54c764653a1391fc15
+
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ftjhtxlpjchrobftmnei.supabase.co'
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0amh0eGxwamNocm9iZnRtbmVpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMzODg3NTUsImV4cCI6MjA2ODk2NDc1NX0.nJQUFU7sPIUHRgUsd7Ij9wngew1WraNnPgPCULIO1Y4'
 
 // Web-compatible storage
-declare const window: any;
-const isWeb = typeof window !== 'undefined' && Platform.OS === 'web';
+const isWeb = typeof window !== 'undefined' && Platform.OS === 'web'
 
-const storage = isWeb
-  ? {
-      getItem: (key: string) => Promise.resolve(window.localStorage.getItem(key)),
-      setItem: (key: string, value: string) => {
-        window.localStorage.setItem(key, value);
-        return Promise.resolve();
-      },
-      removeItem: (key: string) => {
-        window.localStorage.removeItem(key);
-        return Promise.resolve();
-      },
+const storage = isWeb ? {
+  getItem: (key: string) => {
+    try {
+      return Promise.resolve(window.localStorage.getItem(key))
+    } catch {
+      return Promise.resolve(null)
     }
-  : require('@react-native-async-storage/async-storage').default;
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      window.localStorage.setItem(key, value)
+      return Promise.resolve()
+    } catch {
+      return Promise.resolve()
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      window.localStorage.removeItem(key)
+      return Promise.resolve()
+    } catch {
+      return Promise.resolve()
+    }
+  },
+} : AsyncStorage
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
+<<<<<<< HEAD
     storage,
+=======
+    storage: storage,
+>>>>>>> 8e42a40311900f9a3a085c54c764653a1391fc15
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: isWeb,
     flowType: isWeb ? 'pkce' : 'implicit',
   },
-});
+})
 
 // Database Types
 export interface User {

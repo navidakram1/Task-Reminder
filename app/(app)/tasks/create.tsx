@@ -265,12 +265,63 @@ export default function CreateEditTaskScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Due Date</Text>
+
+            {/* Quick Date Selection */}
+            <View style={styles.quickDateContainer}>
+              <TouchableOpacity
+                style={styles.quickDateButton}
+                onPress={() => setDueDate(new Date().toISOString().split('T')[0])}
+              >
+                <Text style={styles.quickDateText}>Today</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickDateButton}
+                onPress={() => {
+                  const tomorrow = new Date()
+                  tomorrow.setDate(tomorrow.getDate() + 1)
+                  setDueDate(tomorrow.toISOString().split('T')[0])
+                }}
+              >
+                <Text style={styles.quickDateText}>Tomorrow</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickDateButton}
+                onPress={() => {
+                  const nextWeek = new Date()
+                  nextWeek.setDate(nextWeek.getDate() + 7)
+                  setDueDate(nextWeek.toISOString().split('T')[0])
+                }}
+              >
+                <Text style={styles.quickDateText}>Next Week</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.quickDateButton, styles.clearButton]}
+                onPress={() => setDueDate('')}
+              >
+                <Text style={[styles.quickDateText, styles.clearButtonText]}>Clear</Text>
+              </TouchableOpacity>
+            </View>
+
             <TextInput
               style={styles.input}
               value={dueDate}
               onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD (optional)"
+              placeholder="YYYY-MM-DD (or use buttons above)"
             />
+
+            {dueDate && (
+              <Text style={styles.datePreview}>
+                📅 Due: {new Date(dueDate + 'T00:00:00').toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -512,6 +563,40 @@ const styles = StyleSheet.create({
   emojiOptionText: {
     fontSize: 12,
     color: '#666',
+    fontWeight: '500',
+  },
+  // Quick Date Selection Styles
+  quickDateContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  quickDateButton: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  quickDateText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  clearButton: {
+    backgroundColor: '#f8f9fa',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  clearButtonText: {
+    color: '#6c757d',
+  },
+  datePreview: {
+    fontSize: 14,
+    color: '#28a745',
+    marginTop: 8,
     fontWeight: '500',
   },
 })

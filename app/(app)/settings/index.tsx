@@ -269,15 +269,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>🏠 Household</Text>
 
-          {household && (
-            <HouseholdSwitcher
-              currentHousehold={household}
-              onHouseholdChange={(newHousehold) => {
-                setHousehold(newHousehold)
-                // Optionally refresh other data
-              }}
-            />
-          )}
+          {/* HouseholdSwitcher temporarily disabled */}
 
           {household ? (
             <>

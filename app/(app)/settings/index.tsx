@@ -186,60 +186,83 @@ export default function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>⚙️ Settings</Text>
-          <Text style={styles.subtitle}>Manage your account and preferences</Text>
+      <View style={styles.headerContainer}>
+        <View style={styles.headerGradient}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <Text style={styles.title}>⚙️ Settings</Text>
+              <Text style={styles.subtitle}>Manage your account and preferences</Text>
+            </View>
+            <View style={styles.placeholder} />
+          </View>
         </View>
-        <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Quick Actions */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push('/(app)/household/activity')}
-          >
-            <Text style={styles.quickActionIcon}>📋</Text>
-            <Text style={styles.quickActionText}>Activity</Text>
-          </TouchableOpacity>
+        {/* Enhanced Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.quickActionPrimary]}
+              onPress={() => router.push('/(app)/household/activity')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>📋</Text>
+              </View>
+              <Text style={styles.quickActionText}>Activity</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push('/(app)/household/members')}
-          >
-            <Text style={styles.quickActionIcon}>👥</Text>
-            <Text style={styles.quickActionText}>Members</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.quickActionSecondary]}
+              onPress={() => router.push('/(app)/household/members')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>👥</Text>
+              </View>
+              <Text style={styles.quickActionText}>Members</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push('/(onboarding)/invite-members')}
-          >
-            <Text style={styles.quickActionIcon}>📧</Text>
-            <Text style={styles.quickActionText}>Invite</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.quickActionTertiary]}
+              onPress={() => router.push('/(onboarding)/invite-members')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>📧</Text>
+              </View>
+              <Text style={styles.quickActionText}>Invite</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickActionButton}
-            onPress={() => router.push('/(app)/subscription/plans')}
-          >
-            <Text style={styles.quickActionIcon}>⭐</Text>
-            <Text style={styles.quickActionText}>Upgrade</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickActionButton, styles.quickActionQuaternary]}
+              onPress={() => router.push('/(app)/subscription/plans')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>⭐</Text>
+              </View>
+              <Text style={styles.quickActionText}>Upgrade</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Profile Section */}
+        {/* Enhanced Profile Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👤 Profile</Text>
-          
+
           <TouchableOpacity
             style={styles.profileCard}
             onPress={() => router.push('/(onboarding)/profile-setup')}
+            activeOpacity={0.8}
           >
             <View style={styles.profileContainer}>
               {profile?.photo_url ? (
@@ -260,7 +283,9 @@ export default function SettingsScreen() {
               </View>
             </View>
             <View style={styles.profileArrow}>
-              <Text style={styles.settingArrow}>›</Text>
+              <View style={styles.arrowContainer}>
+                <Text style={styles.settingArrow}>›</Text>
+              </View>
             </View>
           </TouchableOpacity>
         </View>
@@ -295,12 +320,18 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={styles.settingRow}
                 onPress={() => router.push('/(app)/settings/default-household')}
+                activeOpacity={0.8}
               >
+                <View style={styles.settingIconContainer}>
+                  <Text style={styles.settingIcon}>🏠</Text>
+                </View>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingTitle}>Default Household</Text>
                   <Text style={styles.settingSubtitle}>Choose which household loads on startup</Text>
                 </View>
-                <Text style={styles.settingArrow}>›</Text>
+                <View style={styles.arrowContainer}>
+                  <Text style={styles.settingArrow}>›</Text>
+                </View>
               </TouchableOpacity>
 
               {(household.userRole === 'admin' || household.userRole === 'captain') && (

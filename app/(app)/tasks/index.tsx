@@ -327,16 +327,16 @@ export default function TaskListScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Enhanced Header with Gradient */}
+      {/* Modern Header */}
       <View style={styles.headerContainer}>
         <View style={styles.headerGradient}>
           <View style={styles.header}>
             <View style={styles.headerContent}>
-              <View style={styles.headerLeft}>
-                <Text style={styles.title}>📋 Tasks</Text>
-                <Text style={styles.subtitle}>
-                  {tasks.length} total • {tasks.filter(t => t.status === 'completed').length} completed
-                </Text>
+              <Text style={styles.title}>✅ My Tasks</Text>
+              <Text style={styles.subtitle}>
+                {filteredTasks.length} of {tasks.length} tasks • {Math.round((tasks.filter(t => t.status === 'completed').length / Math.max(tasks.length, 1)) * 100)}% complete
+              </Text>
+              <View style={styles.progressContainer}>
                 <View style={styles.progressBar}>
                   <View
                     style={[
@@ -346,37 +346,25 @@ export default function TaskListScreen() {
                   />
                 </View>
               </View>
-              <View style={styles.headerRight}>
-                <TouchableOpacity
-                  style={styles.sortButton}
-                  onPress={() => {
-                    // Toggle sort order
-                    const sortedTasks = [...tasks].reverse()
-                    setTasks(sortedTasks)
-                  }}
-                >
-                  <Text style={styles.sortButtonText}>🔄</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => router.push('/(app)/tasks/create')}
-                >
-                  <Text style={styles.addButtonText}>+ Add</Text>
-                </TouchableOpacity>
-              </View>
             </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push('/(app)/tasks/create')}
+            >
+              <Text style={styles.addButtonIcon}>+</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* Enhanced Search Bar */}
-      <View style={styles.searchContainer}>
+      {/* Modern Search & Filter Bar */}
+      <View style={styles.searchFilterContainer}>
         <View style={styles.searchInputContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Search tasks..."
-            placeholderTextColor="#999"
+            placeholderTextColor="#94a3b8"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -391,126 +379,89 @@ export default function TaskListScreen() {
         </View>
       </View>
 
-      {/* Enhanced Filter Buttons */}
+      {/* Modern Filter Chips */}
       <View style={styles.filterSection}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.filterScrollView}
           contentContainerStyle={styles.filterContainer}
         >
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === 'all' && styles.activeFilter,
-              styles.filterButtonAll
-            ]}
-            onPress={() => setFilter('all')}
-          >
-            <View style={styles.filterButtonContent}>
-              <Text style={styles.filterEmoji}>📋</Text>
-              <Text style={[styles.filterText, filter === 'all' && styles.activeFilterText]}>
-                All
+          {[
+            { key: 'all', label: 'All', icon: '📋', count: tasks.length },
+            { key: 'pending', label: 'To Do', icon: '⏳', count: tasks.filter(t => t.status === 'pending' || !t.status).length },
+            { key: 'assigned', label: 'Mine', icon: '👤', count: tasks.filter(t => t.assignee_id === user?.id).length },
+            { key: 'completed', label: 'Done', icon: '✅', count: tasks.filter(t => t.status === 'completed').length }
+          ].map((filterOption) => (
+            <TouchableOpacity
+              key={filterOption.key}
+              style={[
+                styles.filterChip,
+                filter === filterOption.key && styles.activeFilterChip
+              ]}
+              onPress={() => setFilter(filterOption.key as FilterType)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.filterIcon}>{filterOption.icon}</Text>
+              <Text style={[
+                styles.filterLabel,
+                filter === filterOption.key && styles.activeFilterLabel
+              ]}>
+                {filterOption.label}
               </Text>
-              <Text style={[styles.filterCount, filter === 'all' && styles.activeFilterCount]}>
-                {tasks.length}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === 'pending' && styles.activeFilter,
-              styles.filterButtonPending
-            ]}
-            onPress={() => setFilter('pending')}
-          >
-            <View style={styles.filterButtonContent}>
-              <Text style={styles.filterEmoji}>⏳</Text>
-              <Text style={[styles.filterText, filter === 'pending' && styles.activeFilterText]}>
-                Pending
-              </Text>
-              <Text style={[styles.filterCount, filter === 'pending' && styles.activeFilterCount]}>
-                {tasks.filter(t => t.status === 'pending' || !t.status).length}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === 'assigned' && styles.activeFilter,
-              styles.filterButtonAssigned
-            ]}
-            onPress={() => setFilter('assigned')}
-          >
-            <View style={styles.filterButtonContent}>
-              <Text style={styles.filterEmoji}>👤</Text>
-              <Text style={[styles.filterText, filter === 'assigned' && styles.activeFilterText]}>
-                Assigned
-              </Text>
-              <Text style={[styles.filterCount, filter === 'assigned' && styles.activeFilterCount]}>
-                {tasks.filter(t => t.assignee_id === user?.id).length}
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filterButton,
-              filter === 'completed' && styles.activeFilter,
-              styles.filterButtonCompleted
-            ]}
-            onPress={() => setFilter('completed')}
-          >
-            <View style={styles.filterButtonContent}>
-              <Text style={styles.filterEmoji}>✅</Text>
-              <Text style={[styles.filterText, filter === 'completed' && styles.activeFilterText]}>
-                Completed
-              </Text>
-              <Text style={[styles.filterCount, filter === 'completed' && styles.activeFilterCount]}>
-                {tasks.filter(t => t.status === 'completed').length}
-              </Text>
-            </View>
-          </TouchableOpacity>
+              <View style={[
+                styles.filterBadge,
+                filter === filterOption.key && styles.activeFilterBadge
+              ]}>
+                <Text style={[
+                  styles.filterBadgeText,
+                  filter === filterOption.key && styles.activeFilterBadgeText
+                ]}>
+                  {filterOption.count}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
 
-      {/* Enhanced Quick Actions */}
-      <View style={styles.quickActionsSection}>
-        <View style={styles.quickActionsContainer}>
-          <TouchableOpacity
-            style={[styles.quickActionButton, styles.quickActionPrimary]}
-            onPress={() => router.push('/(app)/tasks/create')}
-          >
-            <View style={styles.quickActionContent}>
-              <Text style={styles.quickActionIcon}>➕</Text>
-              <Text style={styles.quickActionText}>Quick Add</Text>
-            </View>
-          </TouchableOpacity>
+      {/* Quick Actions */}
+      {filteredTasks.length > 0 && (
+        <View style={styles.quickActionsSection}>
+          <View style={styles.quickActionsContainer}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => router.push('/(app)/tasks/random-assignment')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickActionIcon}>🎲</Text>
+              <Text style={styles.quickActionText}>Shuffle Tasks</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.quickActionButton, styles.quickActionSecondary]}
-            onPress={() => {
-              // Mark all visible tasks as completed
-              Alert.alert(
-                'Mark All Complete',
-                `Mark all ${filteredTasks.length} visible tasks as completed?`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Mark Complete', onPress: () => markAllComplete() }
-                ]
-              )
-            }}
-          >
-            <View style={styles.quickActionContent}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => {
+                const pendingTasks = filteredTasks.filter(t => t.status !== 'completed')
+                if (pendingTasks.length === 0) {
+                  Alert.alert('Info', 'All visible tasks are already completed!')
+                  return
+                }
+                Alert.alert(
+                  'Complete All',
+                  `Mark ${pendingTasks.length} pending tasks as completed?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Complete', onPress: () => markAllComplete() }
+                  ]
+                )
+              }}
+              activeOpacity={0.8}
+            >
               <Text style={styles.quickActionIcon}>✅</Text>
               <Text style={styles.quickActionText}>Complete All</Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
       <ScrollView
         style={styles.taskList}

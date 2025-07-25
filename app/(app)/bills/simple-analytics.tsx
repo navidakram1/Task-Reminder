@@ -2,25 +2,15 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
-    Dimensions,
     RefreshControl,
     ScrollView,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
-// Conditional import for charts - will be available after npm install
-let LineChart: any, PieChart: any, BarChart: any
-try {
-  const chartKit = require('react-native-chart-kit')
-  LineChart = chartKit.LineChart
-  PieChart = chartKit.PieChart
-  BarChart = chartKit.BarChart
-} catch (error) {
-  console.log('Chart kit not installed yet - install with: npm install react-native-chart-kit react-native-svg')
-}
 
 interface SpendingAnalytics {
   category_name: string
@@ -30,11 +20,6 @@ interface SpendingAnalytics {
   avg_amount: number
   percentage_of_total: number
   trend_direction: 'up' | 'down' | 'stable' | 'new'
-}
-
-interface MonthlySpending {
-  month: string
-  amount: number
 }
 
 interface DebtSummary {
@@ -47,11 +32,8 @@ interface DebtSummary {
   overdue_amount: number
 }
 
-const screenWidth = Dimensions.get('window').width
-
-export default function BillAnalyticsScreen() {
+export default function SimpleBillAnalyticsScreen() {
   const [analytics, setAnalytics] = useState<SpendingAnalytics[]>([])
-  const [monthlyData, setMonthlyData] = useState<MonthlySpending[]>([])
   const [debtSummary, setDebtSummary] = useState<DebtSummary[]>([])
   const [totalSpending, setTotalSpending] = useState(0)
   const [selectedPeriod, setSelectedPeriod] = useState<'3m' | '6m' | '1y'>('6m')
@@ -110,31 +92,6 @@ export default function BillAnalyticsScreen() {
       const total = (analyticsData || []).reduce((sum, item) => sum + item.total_amount, 0)
       setTotalSpending(total)
 
-      // Fetch monthly spending data
-      const { data: monthlySpendingData } = await supabase
-        .from('bills')
-        .select('amount, date')
-        .eq('household_id', householdMember.household_id)
-        .gte('date', startDate.toISOString().split('T')[0])
-        .lte('date', endDate.toISOString().split('T')[0])
-        .order('date')
-
-      // Group by month
-      const monthlyMap: Record<string, number> = {}
-      monthlySpendingData?.forEach(bill => {
-        const month = new Date(bill.date).toLocaleDateString('en-US', { 
-          year: 'numeric', 
-          month: 'short' 
-        })
-        monthlyMap[month] = (monthlyMap[month] || 0) + bill.amount
-      })
-
-      const monthlyArray = Object.entries(monthlyMap).map(([month, amount]) => ({
-        month,
-        amount
-      }))
-      setMonthlyData(monthlyArray)
-
       // Fetch debt summary
       const { data: debtData, error: debtError } = await supabase
         .rpc('get_household_debt_summary', {
@@ -158,42 +115,6 @@ export default function BillAnalyticsScreen() {
     setRefreshing(false)
   }
 
-  const exportData = async (format: 'csv' | 'pdf') => {
-    try {
-      // This would integrate with a service to generate exports
-      Alert.alert('Export', `Exporting data as ${format.toUpperCase()}...`)
-      // Implementation would depend on chosen export service
-    } catch (error) {
-      Alert.alert('Error', 'Failed to export data')
-    }
-  }
-
-  const getPieChartData = () => {
-    return analytics.slice(0, 6).map((item, index) => ({
-      name: item.category_name,
-      population: item.total_amount,
-      color: getColorForIndex(index),
-      legendFontColor: '#7F7F7F',
-      legendFontSize: 12,
-    }))
-  }
-
-  const getLineChartData = () => {
-    return {
-      labels: monthlyData.slice(-6).map(item => item.month),
-      datasets: [{
-        data: monthlyData.slice(-6).map(item => item.amount),
-        color: (opacity = 1) => `rgba(102, 126, 234, ${opacity})`,
-        strokeWidth: 3
-      }]
-    }
-  }
-
-  const getColorForIndex = (index: number) => {
-    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FFB6C1', '#87CEEB']
-    return colors[index % colors.length]
-  }
-
   const getTrendIcon = (direction: string) => {
     switch (direction) {
       case 'up': return '📈'
@@ -202,6 +123,11 @@ export default function BillAnalyticsScreen() {
       case 'new': return '✨'
       default: return '📊'
     }
+  }
+
+  const getColorForIndex = (index: number) => {
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD']
+    return colors[index % colors.length]
   }
 
   if (loading) {
@@ -216,25 +142,18 @@ export default function BillAnalyticsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.headerContainer}>
-        <View style={styles.headerGradient}>
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
-            <View style={styles.headerContent}>
-              <Text style={styles.title}>📊 Spending Analytics</Text>
-              <Text style={styles.subtitle}>Insights & Reports</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.exportButton}
-              onPress={() => exportData('csv')}
-            >
-              <Text style={styles.exportText}>📤</Text>
-            </TouchableOpacity>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backText}>← Back</Text>
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>📊 Spending Analytics</Text>
+            <Text style={styles.subtitle}>Simple Overview</Text>
           </View>
+          <View style={styles.placeholder} />
         </View>
       </View>
 
@@ -275,86 +194,15 @@ export default function BillAnalyticsScreen() {
           </View>
           
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryLabel}>Avg per Month</Text>
-            <Text style={styles.summaryValue}>
-              ${(totalSpending / (selectedPeriod === '3m' ? 3 : selectedPeriod === '6m' ? 6 : 12)).toFixed(2)}
-            </Text>
-            <Text style={styles.summarySubtext}>Monthly average</Text>
+            <Text style={styles.summaryLabel}>Categories</Text>
+            <Text style={styles.summaryValue}>{analytics.length}</Text>
+            <Text style={styles.summarySubtext}>Active categories</Text>
           </View>
         </View>
 
-        {/* Spending Trends Chart */}
-        {monthlyData.length > 0 && (
-          <View style={styles.chartSection}>
-            <Text style={styles.chartTitle}>📈 Spending Trends</Text>
-            {LineChart ? (
-              <LineChart
-                data={getLineChartData()}
-                width={screenWidth - 40}
-                height={220}
-                chartConfig={{
-                  backgroundColor: '#ffffff',
-                  backgroundGradientFrom: '#ffffff',
-                  backgroundGradientTo: '#ffffff',
-                  decimalPlaces: 0,
-                  color: (opacity = 1) => `rgba(102, 126, 234, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-                  style: {
-                    borderRadius: 16
-                  },
-                  propsForDots: {
-                    r: '6',
-                    strokeWidth: '2',
-                    stroke: '#667eea'
-                  }
-                }}
-                bezier
-                style={styles.chart}
-              />
-            ) : (
-              <View style={styles.chartPlaceholder}>
-                <Text style={styles.chartPlaceholderText}>📊</Text>
-                <Text style={styles.chartPlaceholderTitle}>Charts Loading...</Text>
-                <Text style={styles.chartPlaceholderSubtext}>
-                  Run: npm install react-native-chart-kit react-native-svg
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
         {/* Category Breakdown */}
-        {analytics.length > 0 && (
-          <View style={styles.chartSection}>
-            <Text style={styles.chartTitle}>🥧 Category Breakdown</Text>
-            {PieChart ? (
-              <PieChart
-                data={getPieChartData()}
-                width={screenWidth - 40}
-                height={220}
-                chartConfig={{
-                  color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                }}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="15"
-                style={styles.chart}
-              />
-            ) : (
-              <View style={styles.chartPlaceholder}>
-                <Text style={styles.chartPlaceholderText}>🥧</Text>
-                <Text style={styles.chartPlaceholderTitle}>Pie Chart Loading...</Text>
-                <Text style={styles.chartPlaceholderSubtext}>
-                  Install chart dependencies to view breakdown
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Category Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📋 Category Details</Text>
+          <Text style={styles.sectionTitle}>📋 Category Breakdown</Text>
           {analytics.map((item, index) => (
             <View key={item.category_name} style={styles.categoryItem}>
               <View style={styles.categoryHeader}>
@@ -402,7 +250,7 @@ export default function BillAnalyticsScreen() {
                     styles.debtAmount,
                     { color: debt.net_amount >= 0 ? '#10b981' : '#ef4444' }
                   ]}>
-                    {debt.net_amount >= 0 ? '+' : ''}${debt.net_amount.toFixed(2)}
+                    {debt.net_amount >= 0 ? '+' : ''}${Math.abs(debt.net_amount).toFixed(2)}
                   </Text>
                 </View>
                 <View style={styles.debtDetails}>
@@ -419,33 +267,23 @@ export default function BillAnalyticsScreen() {
           </View>
         )}
 
-        {/* Export Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📤 Export Data</Text>
-          <View style={styles.exportOptions}>
-            <TouchableOpacity
-              style={styles.exportOptionButton}
-              onPress={() => exportData('csv')}
-            >
-              <Text style={styles.exportOptionIcon}>📊</Text>
-              <Text style={styles.exportOptionText}>Export CSV</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.exportOptionButton}
-              onPress={() => exportData('pdf')}
-            >
-              <Text style={styles.exportOptionIcon}>📄</Text>
-              <Text style={styles.exportOptionText}>Export PDF</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Upgrade Notice */}
+        <View style={styles.upgradeNotice}>
+          <Text style={styles.upgradeIcon}>📈</Text>
+          <Text style={styles.upgradeTitle}>Want Visual Charts?</Text>
+          <Text style={styles.upgradeText}>
+            Install chart dependencies to see beautiful graphs and charts
+          </Text>
+          <Text style={styles.upgradeCommand}>
+            npm install react-native-chart-kit react-native-svg
+          </Text>
         </View>
       </ScrollView>
     </View>
   )
 }
 
-const styles = {
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8faff',
@@ -472,14 +310,12 @@ const styles = {
     shadowRadius: 12,
     elevation: 8,
   },
-  headerGradient: {
-    paddingBottom: 24,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   backButton: {
     padding: 8,
@@ -504,11 +340,8 @@ const styles = {
     color: '#64748b',
     fontWeight: '500',
   },
-  exportButton: {
-    padding: 8,
-  },
-  exportText: {
-    fontSize: 20,
+  placeholder: {
+    width: 40,
   },
   periodSelector: {
     flexDirection: 'row',
@@ -572,54 +405,6 @@ const styles = {
     fontSize: 12,
     color: '#94a3b8',
     fontWeight: '500',
-  },
-  chartSection: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 24,
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 16,
-  },
-  chart: {
-    borderRadius: 16,
-  },
-  chartPlaceholder: {
-    height: 220,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8faff',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    borderStyle: 'dashed',
-  },
-  chartPlaceholderText: {
-    fontSize: 48,
-    marginBottom: 12,
-    opacity: 0.6,
-  },
-  chartPlaceholderTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  chartPlaceholderSubtext: {
-    fontSize: 12,
-    color: '#94a3b8',
-    textAlign: 'center',
-    paddingHorizontal: 20,
   },
   section: {
     marginBottom: 24,
@@ -738,30 +523,41 @@ const styles = {
     fontSize: 14,
     color: '#64748b',
   },
-  exportOptions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  exportOptionButton: {
-    flex: 1,
+  upgradeNotice: {
     backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 20,
+    borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderStyle: 'dashed',
   },
-  exportOptionIcon: {
-    fontSize: 24,
+  upgradeIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  upgradeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
     marginBottom: 8,
   },
-  exportOptionText: {
+  upgradeText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e293b',
+    color: '#64748b',
+    textAlign: 'center',
+    marginBottom: 12,
   },
-}
+  upgradeCommand: {
+    fontSize: 12,
+    color: '#667eea',
+    fontFamily: 'monospace',
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+})

@@ -243,10 +243,47 @@ export default function DashboardScreen() {
               day: 'numeric'
             })}</Text>
           </View>
-          <View style={styles.weatherWidget}>
-            <Text style={styles.weatherIcon}>☀️</Text>
-            <Text style={styles.weatherTemp}>72°</Text>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.notificationBar,
+              (data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                ? styles.notificationBarSuccess
+                : styles.notificationBarAlert
+            ]}
+            onPress={() => router.push('/(app)/household/activity')}
+            activeOpacity={0.8}
+          >
+            <View style={[
+              styles.notificationIcon,
+              (data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                ? styles.notificationIconSuccess
+                : styles.notificationIconAlert
+            ]}>
+              <Text style={styles.notificationBadge}>
+                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                  ? '✓'
+                  : data.upcomingTasks.length + data.pendingTransfers.length
+                }
+              </Text>
+            </View>
+            <View style={styles.notificationContent}>
+              <Text style={styles.notificationText}>
+                {data.upcomingTasks.length > 0
+                  ? `${data.upcomingTasks.length} tasks due soon`
+                  : data.pendingTransfers.length > 0
+                    ? `${data.pendingTransfers.length} pending transfers`
+                    : 'All caught up! 🎉'
+                }
+              </Text>
+              <Text style={styles.notificationSubtext}>
+                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                  ? 'Great work, team!'
+                  : 'Tap to view details'
+                }
+              </Text>
+            </View>
+            <Text style={styles.notificationArrow}>→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Enhanced Household Card with Gradient */}
@@ -626,25 +663,63 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  weatherWidget: {
+  notificationBar: {
+    flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 12,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
   },
-  weatherIcon: {
-    fontSize: 24,
-    marginBottom: 4,
+  notificationBarAlert: {
+    borderLeftColor: '#ff6b6b',
   },
-  weatherTemp: {
-    fontSize: 16,
+  notificationBarSuccess: {
+    borderLeftColor: '#4caf50',
+  },
+  notificationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificationIconAlert: {
+    backgroundColor: '#ff6b6b',
+  },
+  notificationIconSuccess: {
+    backgroundColor: '#4caf50',
+  },
+  notificationBadge: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  notificationContent: {
+    flex: 1,
+  },
+  notificationText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#333',
+    marginBottom: 2,
+  },
+  notificationSubtext: {
+    fontSize: 12,
+    color: '#666',
+  },
+  notificationArrow: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: 'bold',
   },
   householdCard: {
     backgroundColor: '#667eea',

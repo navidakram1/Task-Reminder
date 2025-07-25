@@ -372,12 +372,20 @@ export default function HouseholdActivityScreen() {
               <Text style={styles.title}>🏠 {household.name}</Text>
               <Text style={styles.subtitle}>Activity & Proposals</Text>
             </View>
-            <TouchableOpacity
-              style={styles.createProposalButton}
-              onPress={() => router.push('/(app)/proposals/create')}
-            >
-              <Text style={styles.createProposalIcon}>🗳️</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.headerActionButton}
+                onPress={() => router.push('/(app)/household/bills')}
+              >
+                <Text style={styles.headerActionIcon}>💰</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.createProposalButton}
+                onPress={() => router.push('/(app)/proposals/create')}
+              >
+                <Text style={styles.createProposalIcon}>🗳️</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -639,6 +647,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerActionIcon: {
+    fontSize: 20,
   },
   createProposalButton: {
     width: 48,

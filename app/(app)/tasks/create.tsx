@@ -30,6 +30,8 @@ export default function CreateEditTaskScreen() {
   const [householdMembers, setHouseholdMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [household, setHousehold] = useState<any>(null)
+  const [households, setHouseholds] = useState<any[]>([])
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState('')
   const { user } = useAuth()
 
   // Common task emojis
@@ -40,48 +42,127 @@ export default function CreateEditTaskScreen() {
   ]
 
   useEffect(() => {
-    fetchHouseholdMembers()
+    fetchUserHouseholds()
     if (isEditing) {
       fetchTaskDetails()
     }
   }, [])
 
-  const fetchHouseholdMembers = async () => {
+  useEffect(() => {
+    if (selectedHouseholdId) {
+      fetchHouseholdMembers(selectedHouseholdId)
+    }
+  }, [selectedHouseholdId])
+
+  const fetchUserHouseholds = async () => {
     if (!user) return
 
     try {
-      // Get user's household
-      const { data: householdMember } = await supabase
+      // Get all user's households
+      const { data: householdData, error } = await supabase
         .from('household_members')
         .select(`
           household_id,
+          role,
           households (
             id,
-            name
+            name,
+            type
           )
         `)
         .eq('user_id', user.id)
-        .single()
 
-      if (!householdMember?.households) return
-      setHousehold(householdMember.households)
+      if (error) throw error
 
-      // Get all household members
-      const { data: members } = await supabase
+      const userHouseholds = householdData?.map(hm => ({
+        id: hm.household_id,
+        name: hm.households.name,
+        type: hm.households.type || 'household',
+        role: hm.role
+      })) || []
+
+      console.log('Fetched user households:', userHouseholds)
+      setHouseholds(userHouseholds)
+
+      // Set default household (first one or get from user preferences)
+      if (userHouseholds.length > 0) {
+        const defaultHousehold = userHouseholds[0] // You can implement logic to get user's preferred default
+        console.log('Setting default household:', defaultHousehold)
+        setSelectedHouseholdId(defaultHousehold.id)
+        setHousehold(defaultHousehold)
+      }
+    } catch (error) {
+      console.error('Error fetching user households:', error)
+    }
+  }
+
+  const fetchHouseholdMembers = async (householdId: string) => {
+    if (!householdId) return
+
+    try {
+      // Get all household members with their profile information
+      const { data: members, error } = await supabase
         .from('household_members')
         .select(`
           user_id,
-          profiles (
+          role,
+          users!inner (
             id,
-            name,
-            email
+            email,
+            user_metadata
           )
         `)
-        .eq('household_id', householdMember.household_id)
+        .eq('household_id', householdId)
 
-      setHouseholdMembers(members || [])
+      if (error) throw error
+
+      // Transform the data to include name from user_metadata
+      const transformedMembers = members?.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: {
+          id: member.users.id,
+          name: member.users.user_metadata?.name ||
+                member.users.user_metadata?.full_name ||
+                member.users.email?.split('@')[0] || 'Unknown',
+          email: member.users.email
+        }
+      })) || []
+
+      console.log('Fetched household members:', transformedMembers)
+      setHouseholdMembers(transformedMembers)
     } catch (error) {
       console.error('Error fetching household members:', error)
+      // Fallback: try alternative query structure
+      try {
+        const { data: fallbackMembers } = await supabase
+          .from('household_members')
+          .select('user_id, role')
+          .eq('household_id', householdId)
+
+        if (fallbackMembers) {
+          const membersWithNames = await Promise.all(
+            fallbackMembers.map(async (member) => {
+              const { data: userData } = await supabase.auth.admin.getUserById(member.user_id)
+              return {
+                user_id: member.user_id,
+                role: member.role,
+                profiles: {
+                  id: member.user_id,
+                  name: userData.user?.user_metadata?.name ||
+                        userData.user?.user_metadata?.full_name ||
+                        userData.user?.email?.split('@')[0] || 'Unknown',
+                  email: userData.user?.email || ''
+                }
+              }
+            })
+          )
+          setHouseholdMembers(membersWithNames)
+        }
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError)
+        setHouseholdMembers([])
+      }
     }
   }
 
@@ -115,8 +196,8 @@ export default function CreateEditTaskScreen() {
       return
     }
 
-    if (!household) {
-      Alert.alert('Error', 'No household found')
+    if (!selectedHouseholdId) {
+      Alert.alert('Error', 'Please select a household')
       return
     }
 
@@ -129,7 +210,7 @@ export default function CreateEditTaskScreen() {
         assignee_id: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
         emoji: selectedEmoji || null,
-        household_id: household.id,
+        household_id: selectedHouseholdId,
         created_by: user?.id,
       }
 
@@ -246,6 +327,36 @@ export default function CreateEditTaskScreen() {
                   </TouchableOpacity>
                 ))}
               </ScrollView>
+            </View>
+          )}
+
+          {/* Household Selector */}
+          {households.length > 1 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Household/Group</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={selectedHouseholdId}
+                  onValueChange={(value) => {
+                    setSelectedHouseholdId(value)
+                    const selectedHousehold = households.find(h => h.id === value)
+                    setHousehold(selectedHousehold)
+                    setAssigneeId('') // Reset assignee when household changes
+                  }}
+                  style={styles.picker}
+                >
+                  {households.map((household) => (
+                    <Picker.Item
+                      key={household.id}
+                      label={`${household.name} ${household.type === 'group' ? '(Group)' : '(Household)'}`}
+                      value={household.id}
+                    />
+                  ))}
+                </Picker>
+              </View>
+              <Text style={styles.helperText}>
+                {households.find(h => h.id === selectedHouseholdId)?.name} is currently selected
+              </Text>
             </View>
           )}
 
@@ -391,16 +502,30 @@ export default function CreateEditTaskScreen() {
                   selectedValue={assigneeId}
                   onValueChange={setAssigneeId}
                   style={styles.picker}
+                  enabled={householdMembers.length > 0}
                 >
-                  <Picker.Item label="Select a person (optional)" value="" />
+                  <Picker.Item
+                    label={householdMembers.length === 0 ? "Loading members..." : "Select a person (optional)"}
+                    value=""
+                  />
                   {householdMembers.map((member) => (
                     <Picker.Item
                       key={member.user_id}
-                      label={member.profiles?.name || member.profiles?.email || 'Unknown'}
+                      label={`${member.profiles?.name || member.profiles?.email || 'Unknown'} ${member.role === 'admin' ? '(Admin)' : ''}`}
                       value={member.user_id}
                     />
                   ))}
                 </Picker>
+                {householdMembers.length === 0 && selectedHouseholdId && (
+                  <Text style={styles.helperText}>
+                    Loading household members...
+                  </Text>
+                )}
+                {householdMembers.length > 0 && (
+                  <Text style={styles.helperText}>
+                    {householdMembers.length} member{householdMembers.length !== 1 ? 's' : ''} available
+                  </Text>
+                )}
               </View>
             )}
 
@@ -807,5 +932,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#856404',
     textAlign: 'center',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 })

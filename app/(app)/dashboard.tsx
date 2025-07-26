@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Modal,
+    Platform,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -157,20 +158,43 @@ export default function DashboardScreen() {
         userRole = defaultHH.user_role
       } else {
         // Fallback to first household user is a member of
-        const { data: householdMember } = await supabase
-          .from('household_members')
-          .select(`
-            household_id,
-            role,
-            households (
-              id,
-              name,
-              invite_code
-            )
-          `)
-          .eq('user_id', user.id)
-          .limit(1)
-          .single()
+        // Get user's active household using the new multi-household function
+        const { data: activeHouseholds, error: householdError } = await supabase
+          .rpc('get_user_active_household', {
+            p_user_id: user.id
+          })
+
+        let householdMember = null
+        if (activeHouseholds && activeHouseholds.length > 0) {
+          const activeHousehold = activeHouseholds[0]
+          householdMember = {
+            household_id: activeHousehold.household_id,
+            role: activeHousehold.user_role,
+            households: {
+              id: activeHousehold.household_id,
+              name: activeHousehold.household_name,
+              invite_code: activeHousehold.invite_code
+            }
+          }
+        } else {
+          // Fallback to first household if no active household function
+          const { data: fallbackMember } = await supabase
+            .from('household_members')
+            .select(`
+              household_id,
+              role,
+              households (
+                id,
+                name,
+                invite_code
+              )
+            `)
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle()
+
+          householdMember = fallbackMember
+        }
 
         if (!householdMember) {
           setLoading(false)
@@ -302,6 +326,20 @@ export default function DashboardScreen() {
     }
   }
 
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  }
+
+  const getUserDisplayName = () => {
+    return user?.user_metadata?.name ||
+           user?.user_metadata?.full_name ||
+           user?.email?.split('@')[0] ||
+           'Friend'
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -336,15 +374,30 @@ export default function DashboardScreen() {
         }
       >
       <View style={styles.header}>
+        {/* Enhanced Personal Welcome Message */}
+        <View style={styles.personalWelcomeSection}>
+          <View style={styles.welcomeGradient}>
+            <View style={styles.welcomeContent}>
+              <Text style={styles.greetingText}>
+                {getGreeting()}, {getUserDisplayName()}! 👋
+              </Text>
+              <Text style={styles.welcomeSubtext}>
+                Ready to tackle your day? You have {data.upcomingTasks.length} tasks waiting
+              </Text>
+              <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+              })}</Text>
+            </View>
+            <View style={styles.welcomeIcon}>
+              <Text style={styles.welcomeEmoji}>✨</Text>
+            </View>
+          </View>
+        </View>
+
         <View style={styles.welcomeSection}>
           <View style={styles.welcomeContent}>
-            <Text style={styles.welcomeText}>🏠 Welcome back!</Text>
-            <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric'
-            })}</Text>
-          </View>
           <TouchableOpacity
             style={[
               styles.notificationBar,
@@ -398,15 +451,26 @@ export default function DashboardScreen() {
             <View style={styles.householdInfo}>
               <View style={styles.householdHeader}>
                 <TouchableOpacity
-                  style={styles.householdSelector}
+                  style={styles.coolHouseholdSelector}
                   onPress={(e) => {
                     e.stopPropagation()
                     setShowHouseholdModal(true)
                   }}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.householdName}>🏡 {data.household.name}</Text>
-                  <Text style={styles.dropdownIcon}>▼</Text>
+                  <View style={styles.householdSelectorContent}>
+                    <View style={styles.householdSelectorLeft}>
+                      <Text style={styles.householdSelectorIcon}>🏡</Text>
+                      <View style={styles.householdSelectorInfo}>
+                        <Text style={styles.householdSelectorName}>{data.household.name}</Text>
+                        <Text style={styles.householdSelectorHint}>Tap to switch</Text>
+                      </View>
+                    </View>
+                    <View style={styles.dropdownIconContainer}>
+                      <Text style={styles.dropdownIcon}>⌄</Text>
+                    </View>
+                  </View>
+                  <View style={styles.householdSelectorGlow} />
                 </TouchableOpacity>
                 <View style={styles.householdBadge}>
                   <Text style={styles.badgeText}>Active</Text>
@@ -735,7 +799,7 @@ export default function DashboardScreen() {
       </View>
       </ScrollView>
 
-      {/* Household Switcher Modal */}
+      {/* Enhanced Cool Household Switcher Modal */}
       <Modal
         visible={showHouseholdModal}
         animationType="slide"
@@ -743,48 +807,99 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowHouseholdModal(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
-              <Text style={styles.modalCloseButton}>✕</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Switch Household</Text>
-            <TouchableOpacity onPress={() => {
-              setShowHouseholdModal(false)
-              router.push('/(onboarding)/create-join-household')
-            }}>
-              <Text style={styles.modalAddButton}>+ Add</Text>
-            </TouchableOpacity>
+          {/* Cool Header with Gradient */}
+          <View style={styles.modalHeaderGradient}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity
+                style={styles.modalCloseButtonContainer}
+                onPress={() => setShowHouseholdModal(false)}
+              >
+                <View style={styles.modalCloseButton}>
+                  <Text style={styles.modalCloseButtonText}>✕</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.modalTitleContainer}>
+                <Text style={styles.modalTitle}>🏠 Switch Household</Text>
+                <Text style={styles.modalSubtitle}>Choose your active space</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.modalAddButtonContainer}
+                onPress={() => {
+                  setShowHouseholdModal(false)
+                  router.push('/(onboarding)/create-join-household')
+                }}
+              >
+                <View style={styles.modalAddButton}>
+                  <Text style={styles.modalAddButtonText}>+</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <ScrollView style={styles.modalContent}>
-            {households.map((household) => (
+          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {households.map((household, index) => (
               <TouchableOpacity
                 key={household.id}
                 style={[
-                  styles.householdOption,
-                  household.is_active && styles.householdOptionActive
+                  styles.coolHouseholdCard,
+                  household.is_active && styles.coolHouseholdCardActive,
+                  {
+                    transform: [{ scale: household.is_active ? 1.02 : 1 }],
+                    marginBottom: index === households.length - 1 ? 20 : 16
+                  }
                 ]}
                 onPress={() => switchHousehold(household)}
                 disabled={switchingHousehold}
+                activeOpacity={0.8}
               >
-                <View style={styles.householdOptionLeft}>
-                  <Text style={styles.householdOptionIcon}>
-                    {household.type === 'group' ? '👥' : '🏠'}
-                  </Text>
-                  <View style={styles.householdOptionInfo}>
-                    <Text style={[
-                      styles.householdOptionName,
-                      household.is_active && styles.householdOptionNameActive
+                <View style={styles.householdCardGlow} />
+
+                <View style={styles.householdCardContent}>
+                  <View style={styles.householdCardLeft}>
+                    <View style={[
+                      styles.householdIconContainer,
+                      household.is_active && styles.householdIconContainerActive
                     ]}>
-                      {household.name}
-                    </Text>
-                    <Text style={styles.householdOptionMeta}>
-                      {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
-                    </Text>
+                      <Text style={styles.householdCardIcon}>
+                        {household.type === 'group' ? '👥' : '🏠'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.householdCardInfo}>
+                      <Text style={[
+                        styles.householdCardName,
+                        household.is_active && styles.householdCardNameActive
+                      ]}>
+                        {household.name}
+                      </Text>
+                      <Text style={styles.householdCardMeta}>
+                        {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
+                      </Text>
+                      <Text style={styles.householdCardType}>
+                        {household.type === 'group' ? 'Group' : 'Household'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.householdCardRight}>
+                    {household.is_active ? (
+                      <View style={styles.activeIndicatorContainer}>
+                        <Text style={styles.activeIndicatorText}>✓</Text>
+                        <Text style={styles.activeLabel}>Active</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.switchIndicator}>
+                        <Text style={styles.switchText}>Tap to switch</Text>
+                        <Text style={styles.switchArrow}>→</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
+
                 {household.is_active && (
-                  <Text style={styles.activeIndicator}>✓</Text>
+                  <View style={styles.activeGlow} />
                 )}
               </TouchableOpacity>
             ))}
@@ -814,6 +929,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    paddingBottom: Platform.OS === 'ios' ? 85 : 65, // Account for new bottom navigation
   },
   scrollContainer: {
     flex: 1,
@@ -862,6 +978,40 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 60,
   },
+  // Enhanced Personal Welcome Section
+  personalWelcomeSection: {
+    marginBottom: 20,
+  },
+  welcomeGradient: {
+    backgroundColor: '#667eea',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  greetingText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  welcomeIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  welcomeEmoji: {
+    fontSize: 28,
+  },
   welcomeSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -877,9 +1027,16 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  dateText: {
+  welcomeSubtext: {
     fontSize: 16,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  dateText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   notificationBar: {
     flexDirection: 'row',
@@ -939,6 +1096,72 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontWeight: 'bold',
   },
+  // Enhanced Cool Household Selector
+  coolHouseholdSelector: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+  },
+  householdSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  householdSelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  householdSelectorIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  householdSelectorInfo: {
+    flex: 1,
+  },
+  householdSelectorName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  householdSelectorHint: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  dropdownIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownIcon: {
+    fontSize: 14,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  householdSelectorGlow: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#667eea',
+    opacity: 0.3,
+  },
+
   householdCard: {
     backgroundColor: '#667eea',
     padding: 20,
@@ -1498,40 +1721,211 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontWeight: '500',
   },
-  // Modal Styles
+  // Enhanced Cool Modal Styles
   modalContainer: {
     flex: 1,
     backgroundColor: '#f8faff',
+  },
+  modalHeaderGradient: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#667eea',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+  },
+  modalCloseButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalCloseButton: {
-    fontSize: 24,
-    color: '#64748b',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCloseButtonText: {
+    fontSize: 18,
+    color: '#fff',
     fontWeight: '600',
+  },
+  modalTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#1e293b',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  modalAddButtonContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalAddButton: {
-    fontSize: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalAddButtonText: {
+    fontSize: 20,
     color: '#667eea',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   modalContent: {
     flex: 1,
-    paddingTop: 20,
+    paddingTop: 24,
+    paddingHorizontal: 20,
+  },
+  // Cool Household Cards
+  coolHouseholdCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  coolHouseholdCardActive: {
+    borderColor: '#667eea',
+    backgroundColor: '#f0f4ff',
+    shadowColor: '#667eea',
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  householdCardGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#667eea',
+    opacity: 0,
+  },
+  householdCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+  },
+  householdCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  householdIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  householdIconContainerActive: {
+    backgroundColor: '#667eea',
+  },
+  householdCardIcon: {
+    fontSize: 24,
+  },
+  householdCardInfo: {
+    flex: 1,
+  },
+  householdCardName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 6,
+  },
+  householdCardNameActive: {
+    color: '#667eea',
+  },
+  householdCardMeta: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  householdCardType: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  householdCardRight: {
+    alignItems: 'center',
+  },
+  activeIndicatorContainer: {
+    alignItems: 'center',
+  },
+  activeIndicatorText: {
+    fontSize: 24,
+    color: '#667eea',
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  activeLabel: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  switchIndicator: {
+    alignItems: 'center',
+  },
+  switchText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  switchArrow: {
+    fontSize: 16,
+    color: '#94a3b8',
+  },
+  activeGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#667eea',
   },
   householdOption: {
     backgroundColor: '#fff',

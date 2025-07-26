@@ -1,5 +1,25 @@
-import { Tabs } from 'expo-router'
-import { Text } from 'react-native'
+import { Tabs } from 'expo-router';
+import { Platform, Text, View } from 'react-native';
+
+// Custom Tab Icon Component
+const TabIcon = ({ emoji, color, focused }: { emoji: string; color: string; focused: boolean }) => (
+  <View style={{
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: focused ? `${color}15` : 'transparent',
+  }}>
+    <Text style={{
+      fontSize: focused ? 22 : 20,
+      color: focused ? color : '#8e8e93',
+      transform: [{ scale: focused ? 1.1 : 1 }],
+    }}>
+      {emoji}
+    </Text>
+  </View>
+)
 
 export default function AppLayout() {
   return (
@@ -7,18 +27,35 @@ export default function AppLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#667eea',
-        tabBarInactiveTintColor: '#999',
+        tabBarInactiveTintColor: '#8e8e93',
         tabBarStyle: {
-          backgroundColor: '#fff',
-          borderTopWidth: 1,
-          borderTopColor: '#e9ecef',
-          paddingTop: 5,
-          paddingBottom: 5,
-          height: 60,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 0,
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: -4,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 12,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? 25 : 8,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
+          marginTop: 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 4,
         },
       }}
     >
@@ -26,8 +63,8 @@ export default function AppLayout() {
         name="dashboard"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🏠</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="🏠" color={color} focused={focused} />
           ),
         }}
       />
@@ -35,8 +72,8 @@ export default function AppLayout() {
         name="tasks"
         options={{
           title: 'Tasks',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>📋</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="📋" color={color} focused={focused} />
           ),
         }}
       />
@@ -44,8 +81,8 @@ export default function AppLayout() {
         name="bills"
         options={{
           title: 'Bills',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>💰</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="💰" color={color} focused={focused} />
           ),
         }}
       />
@@ -53,8 +90,8 @@ export default function AppLayout() {
         name="proposals"
         options={{
           title: 'Proposals',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>🗳️</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="🗳️" color={color} focused={focused} />
           ),
         }}
       />
@@ -62,8 +99,8 @@ export default function AppLayout() {
         name="approvals"
         options={{
           title: 'Approvals',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>✅</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="✅" color={color} focused={focused} />
           ),
         }}
       />
@@ -71,8 +108,8 @@ export default function AppLayout() {
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => (
-            <Text style={{ fontSize: 20, color }}>⚙️</Text>
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon emoji="⚙️" color={color} focused={focused} />
           ),
         }}
       />

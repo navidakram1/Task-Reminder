@@ -74,18 +74,39 @@ export default function CreateEditBillScreen() {
     if (!user) return
 
     try {
-      // Get user's household
-      const { data: householdMember } = await supabase
-        .from('household_members')
-        .select(`
-          household_id,
-          households (
-            id,
-            name
-          )
-        `)
-        .eq('user_id', user.id)
-        .single()
+      // Get user's active household
+      const { data: activeHouseholds } = await supabase
+        .rpc('get_user_active_household', {
+          p_user_id: user.id
+        })
+
+      let householdMember = null
+      if (activeHouseholds && activeHouseholds.length > 0) {
+        const activeHousehold = activeHouseholds[0]
+        householdMember = {
+          household_id: activeHousehold.household_id,
+          households: {
+            id: activeHousehold.household_id,
+            name: activeHousehold.household_name
+          }
+        }
+      } else {
+        // Fallback to first household
+        const { data: fallbackMember } = await supabase
+          .from('household_members')
+          .select(`
+            household_id,
+            households (
+              id,
+              name
+            )
+          `)
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        householdMember = fallbackMember
+      }
 
       if (!householdMember?.households) return
       setHousehold(householdMember.households)
@@ -166,8 +187,6 @@ export default function CreateEditBillScreen() {
 
         setSplits(existingSplits)
       }
-
-      setSplits(existingSplits)
     } catch (error) {
       console.error('Error fetching bill details:', error)
       Alert.alert('Error', 'Failed to load bill details')

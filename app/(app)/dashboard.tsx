@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
+    Modal,
     RefreshControl,
     ScrollView,
     StyleSheet,

@@ -442,6 +442,7 @@ export default function DashboardScreen() {
             </View>
           </View>
         </TouchableOpacity>
+      </View>
 
       {/* Quick Actions Grid */}
       <View style={styles.section}>

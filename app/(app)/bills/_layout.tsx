@@ -1,4 +1,3 @@
-import React from 'react'
 import { Stack } from 'expo-router'
 
 export default function BillsLayout() {
@@ -7,7 +6,11 @@ export default function BillsLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="[id]" />
       <Stack.Screen name="create" />
+      <Stack.Screen name="enhanced-create" />
       <Stack.Screen name="settle-up" />
+      <Stack.Screen name="optimized-settle" />
+      <Stack.Screen name="analytics" />
+      <Stack.Screen name="simple-analytics" />
     </Stack>
   )
 }

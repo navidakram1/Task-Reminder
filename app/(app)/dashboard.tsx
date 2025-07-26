@@ -528,6 +528,19 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={[styles.quickActionCard, styles.secondaryAction]}
+            onPress={() => router.push('/(app)/tasks/smart-assignment')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionIconContainer}>
+              <Text style={styles.actionIcon}>🎯</Text>
+            </View>
+            <Text style={styles.actionTitle}>Smart Assign</Text>
+            <Text style={styles.actionSubtitle}>AI-powered fair assignment</Text>
+            <View style={styles.actionGlow} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickActionCard, styles.tertiaryAction]}
             onPress={() => router.push('/(app)/bills/create')}
             activeOpacity={0.8}
           >

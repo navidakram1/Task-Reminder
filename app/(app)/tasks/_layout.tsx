@@ -1,4 +1,3 @@
-import React from 'react'
 import { Stack } from 'expo-router'
 
 export default function TasksLayout() {
@@ -8,6 +7,7 @@ export default function TasksLayout() {
       <Stack.Screen name="[id]" />
       <Stack.Screen name="create" />
       <Stack.Screen name="random-assignment" />
+      <Stack.Screen name="smart-assignment" />
     </Stack>
   )
 }

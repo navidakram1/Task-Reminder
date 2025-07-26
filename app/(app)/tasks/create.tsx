@@ -441,16 +441,35 @@ export default function CreateEditTaskScreen() {
               <Text style={styles.label}>Task Assignment</Text>
               <TouchableOpacity
                 style={styles.shuffleButton}
-                onPress={() => {
-                  if (householdMembers.length > 0) {
-                    const randomMember = householdMembers[Math.floor(Math.random() * householdMembers.length)]
-                    setAssigneeId(randomMember.user_id)
+                onPress={async () => {
+                  if (!selectedHouseholdId || !title.trim()) {
+                    Alert.alert('Info', 'Please enter a task title first')
+                    return
+                  }
+
+                  try {
+                    const { SimpleRandomAssignmentService } = await import('../../../services/SimpleRandomAssignmentService')
+                    const result = await SimpleRandomAssignmentService.assignTask({
+                      household_id: selectedHouseholdId,
+                      task_title: title.trim(),
+                      effort_score: 1 // Default effort for quick shuffle
+                    })
+
+                    setAssigneeId(result.assigned_to)
                     setRandomAssignment(false)
-                    Alert.alert('🎲 Shuffled!', `Task assigned to ${randomMember.profiles?.name || 'Unknown'}`)
+                    Alert.alert('🎯 Smart Assignment!', result.assignment_reason)
+                  } catch (error) {
+                    // Fallback to simple random if smart assignment fails
+                    if (householdMembers.length > 0) {
+                      const randomMember = householdMembers[Math.floor(Math.random() * householdMembers.length)]
+                      setAssigneeId(randomMember.user_id)
+                      setRandomAssignment(false)
+                      Alert.alert('🎲 Random Assignment!', `Task assigned to ${randomMember.profiles?.name || 'Unknown'}`)
+                    }
                   }
                 }}
               >
-                <Text style={styles.shuffleButtonText}>🎲 Shuffle</Text>
+                <Text style={styles.shuffleButtonText}>🎯 Smart Assign</Text>
               </TouchableOpacity>
             </View>
 

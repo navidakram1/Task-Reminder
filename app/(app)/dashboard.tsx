@@ -373,7 +373,7 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-      <View style={styles.header}>
+        <View style={styles.header}>
         {/* Enhanced Personal Welcome Message */}
         <View style={styles.personalWelcomeSection}>
           <View style={styles.welcomeGradient}>

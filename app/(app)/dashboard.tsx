@@ -731,7 +731,7 @@ export default function DashboardScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
 
       {/* Household Switcher Modal */}
       <Modal

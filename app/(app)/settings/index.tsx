@@ -2,16 +2,19 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
+    Dimensions,
     Image,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
+
+const { width } = Dimensions.get('window')
 
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<any>(null)
@@ -24,7 +27,25 @@ export default function SettingsScreen() {
     billAlerts: true,
   })
   const [loading, setLoading] = useState(true)
+  const [fadeAnim] = useState(new Animated.Value(0))
+  const [slideAnim] = useState(new Animated.Value(50))
   const { user, signOut } = useAuth()
+
+  // Animation effect
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
 
   useEffect(() => {
     fetchUserData()
@@ -195,10 +216,33 @@ export default function SettingsScreen() {
             >
               <Text style={styles.backText}>← Back</Text>
             </TouchableOpacity>
-            <View style={styles.headerContent}>
+            <Animated.View
+              style={[
+                styles.headerContent,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }]
+                }
+              ]}
+            >
               <Text style={styles.title}>⚙️ Settings</Text>
-              <Text style={styles.subtitle}>Manage your account and preferences</Text>
-            </View>
+              <Text style={styles.subtitle}>Manage your {BRAND_NAME} experience</Text>
+              <View style={styles.headerStats}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>
+                    {household ? '1' : '0'}
+                  </Text>
+                  <Text style={styles.statLabel}>Household</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statNumber}>
+                    {subscription?.plan === 'free' ? 'Free' : 'Pro'}
+                  </Text>
+                  <Text style={styles.statLabel}>Plan</Text>
+                </View>
+              </View>
+            </Animated.View>
             <View style={styles.placeholder} />
           </View>
         </View>
@@ -256,7 +300,15 @@ export default function SettingsScreen() {
         </View>
 
         {/* Enhanced Profile Section */}
-        <View style={styles.section}>
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>👤 Profile</Text>
 
           <TouchableOpacity
@@ -279,6 +331,11 @@ export default function SettingsScreen() {
                   {profile?.name || 'Set your name'}
                 </Text>
                 <Text style={styles.profileEmail}>{user?.email}</Text>
+                <View style={styles.profileBadge}>
+                  <Text style={styles.profileBadgeText}>
+                    {subscription?.plan === 'free' ? '🆓 Free User' : '⭐ Pro User'}
+                  </Text>
+                </View>
                 <Text style={styles.profileHint}>Tap to edit profile</Text>
               </View>
             </View>
@@ -288,7 +345,7 @@ export default function SettingsScreen() {
               </View>
             </View>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Household Section */}
         <View style={styles.section}>
@@ -384,78 +441,140 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Notifications Section */}
-        <View style={styles.section}>
+        {/* Enhanced Notifications Section */}
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>🔔 Notifications</Text>
-          
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Email Notifications</Text>
-              <Text style={styles.settingSubtitle}>Receive updates via email</Text>
-            </View>
-            <Switch
-              value={notifications.email}
-              onValueChange={(value) => handleNotificationToggle('email', value)}
-              trackColor={{ false: '#ddd', true: '#667eea' }}
-              thumbColor={notifications.email ? '#fff' : '#f4f3f4'}
-            />
-          </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Push Notifications</Text>
-              <Text style={styles.settingSubtitle}>Get instant alerts on your device</Text>
+          <View style={styles.notificationCard}>
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationIconContainer}>
+                <Text style={styles.notificationIcon}>📧</Text>
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Email Notifications</Text>
+                <Text style={styles.settingSubtitle}>Receive updates via email</Text>
+              </View>
+              <Switch
+                value={notifications.email}
+                onValueChange={(value) => handleNotificationToggle('email', value)}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.PRIMARY }}
+                thumbColor={notifications.email ? '#fff' : '#f9fafb'}
+                ios_backgroundColor="#e5e7eb"
+              />
             </View>
-            <Switch
-              value={notifications.push}
-              onValueChange={(value) => handleNotificationToggle('push', value)}
-              trackColor={{ false: '#ddd', true: '#667eea' }}
-              thumbColor={notifications.push ? '#fff' : '#f4f3f4'}
-            />
-          </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Task Reminders</Text>
-              <Text style={styles.settingSubtitle}>Reminders for due tasks</Text>
+            <View style={styles.notificationDivider} />
+
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationIconContainer}>
+                <Text style={styles.notificationIcon}>📱</Text>
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Push Notifications</Text>
+                <Text style={styles.settingSubtitle}>Get instant alerts on your device</Text>
+              </View>
+              <Switch
+                value={notifications.push}
+                onValueChange={(value) => handleNotificationToggle('push', value)}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.PRIMARY }}
+                thumbColor={notifications.push ? '#fff' : '#f9fafb'}
+                ios_backgroundColor="#e5e7eb"
+              />
             </View>
-            <Switch
-              value={notifications.taskReminders}
-              onValueChange={(value) => handleNotificationToggle('taskReminders', value)}
-              trackColor={{ false: '#ddd', true: '#667eea' }}
-              thumbColor={notifications.taskReminders ? '#fff' : '#f4f3f4'}
-            />
-          </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Bill Alerts</Text>
-              <Text style={styles.settingSubtitle}>Notifications for bill payments</Text>
+            <View style={styles.notificationDivider} />
+
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationIconContainer}>
+                <Text style={styles.notificationIcon}>⏰</Text>
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Task Reminders</Text>
+                <Text style={styles.settingSubtitle}>Reminders for due tasks</Text>
+              </View>
+              <Switch
+                value={notifications.taskReminders}
+                onValueChange={(value) => handleNotificationToggle('taskReminders', value)}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.SECONDARY }}
+                thumbColor={notifications.taskReminders ? '#fff' : '#f9fafb'}
+                ios_backgroundColor="#e5e7eb"
+              />
             </View>
-            <Switch
-              value={notifications.billAlerts}
-              onValueChange={(value) => handleNotificationToggle('billAlerts', value)}
-              trackColor={{ false: '#ddd', true: '#667eea' }}
-              thumbColor={notifications.billAlerts ? '#fff' : '#f4f3f4'}
-            />
-          </View>
-        </View>
 
-        {/* Subscription Section */}
-        <View style={styles.section}>
+            <View style={styles.notificationDivider} />
+
+            <View style={styles.notificationRow}>
+              <View style={styles.notificationIconContainer}>
+                <Text style={styles.notificationIcon}>💰</Text>
+              </View>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Bill Alerts</Text>
+                <Text style={styles.settingSubtitle}>Notifications for bill payments</Text>
+              </View>
+              <Switch
+                value={notifications.billAlerts}
+                onValueChange={(value) => handleNotificationToggle('billAlerts', value)}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.ACCENT }}
+                thumbColor={notifications.billAlerts ? '#fff' : '#f9fafb'}
+                ios_backgroundColor="#e5e7eb"
+              />
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Enhanced Subscription Section */}
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>💎 Subscription</Text>
-          
+
           <TouchableOpacity
-            style={styles.settingRow}
+            style={[
+              styles.subscriptionCard,
+              subscription?.plan !== 'free' && styles.subscriptionCardPro
+            ]}
             onPress={() => router.push('/(app)/subscription/plans')}
+            activeOpacity={0.8}
           >
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Current Plan</Text>
-              <Text style={styles.settingSubtitle}>{getSubscriptionStatus()}</Text>
+            <View style={styles.subscriptionContent}>
+              <View style={styles.subscriptionIcon}>
+                <Text style={styles.subscriptionEmoji}>
+                  {subscription?.plan === 'free' ? '🆓' : '⭐'}
+                </Text>
+              </View>
+              <View style={styles.subscriptionInfo}>
+                <Text style={styles.subscriptionTitle}>
+                  {subscription?.plan === 'free' ? 'Free Plan' : 'SplitDuty Pro'}
+                </Text>
+                <Text style={styles.subscriptionSubtitle}>
+                  {getSubscriptionStatus()}
+                </Text>
+                {subscription?.plan === 'free' && (
+                  <View style={styles.upgradeHint}>
+                    <Text style={styles.upgradeText}>Tap to upgrade</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.subscriptionArrow}>
+                <Text style={styles.settingArrow}>›</Text>
+              </View>
             </View>
-            <Text style={styles.settingArrow}>›</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
         {/* Support Section */}
         <View style={styles.section}>
@@ -494,20 +613,47 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Sign Out Section */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.settingRow} onPress={handleSignOut}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingTitle, styles.dangerText]}>Sign Out</Text>
-              <Text style={styles.settingSubtitle}>Sign out of your account</Text>
+        {/* Enhanced Sign Out Section */}
+        <Animated.View
+          style={[
+            styles.section,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleSignOut}
+            activeOpacity={0.8}
+          >
+            <View style={styles.logoutContent}>
+              <View style={styles.logoutIcon}>
+                <Text style={styles.logoutEmoji}>🚪</Text>
+              </View>
+              <View style={styles.logoutInfo}>
+                <Text style={styles.logoutTitle}>Sign Out</Text>
+                <Text style={styles.logoutSubtitle}>Sign out of your {BRAND_NAME} account</Text>
+              </View>
             </View>
-            <Text style={styles.settingArrow}>›</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
 
-        <View style={styles.versionSection}>
-          <Text style={styles.versionText}>SplitDuty v1.0.0</Text>
-        </View>
+        {/* Enhanced Version Section */}
+        <Animated.View
+          style={[
+            styles.versionSection,
+            {
+              opacity: fadeAnim,
+            }
+          ]}
+        >
+          <View style={styles.versionCard}>
+            <Text style={styles.versionText}>{BRAND_NAME} v1.0.0</Text>
+            <Text style={styles.versionSubtext}>Share Life, Split Smart</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
     </View>
   )
@@ -516,7 +662,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
@@ -528,12 +674,23 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    backgroundColor: 'white',
+    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight + 20,
+    paddingBottom: 25,
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerGradient: {
+    background: `linear-gradient(135deg, ${BRAND_COLORS.PRIMARY} 0%, ${BRAND_COLORS.SECONDARY} 100%)`,
   },
   backText: {
     fontSize: 16,
@@ -544,14 +701,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '800',
+    color: BRAND_COLORS.PRIMARY,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  headerStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: BRAND_COLORS.PRIMARY,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
     marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#e5e7eb',
+    marginHorizontal: 20,
   },
   placeholder: {
     width: 50,
@@ -560,14 +747,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    marginBottom: 25,
+    marginBottom: 30,
     paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 16,
+    letterSpacing: 0.5,
   },
   settingRow: {
     flexDirection: 'row',
@@ -701,6 +889,19 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontWeight: '500',
   },
+  profileBadge: {
+    backgroundColor: BRAND_COLORS.PRIMARY + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+  },
+  profileBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: BRAND_COLORS.PRIMARY,
+  },
   profileArrow: {
     marginLeft: 12,
   },
@@ -760,5 +961,165 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  // Enhanced Notification Styles
+  notificationCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  notificationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  notificationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  notificationIcon: {
+    fontSize: 18,
+  },
+  notificationDivider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginLeft: 68,
+  },
+  // Enhanced Subscription Styles
+  subscriptionCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  subscriptionCardPro: {
+    borderColor: BRAND_COLORS.PRIMARY,
+    backgroundColor: BRAND_COLORS.PRIMARY + '05',
+  },
+  subscriptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subscriptionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: BRAND_COLORS.PRIMARY + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  subscriptionEmoji: {
+    fontSize: 24,
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  subscriptionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 4,
+  },
+  subscriptionSubtitle: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  upgradeHint: {
+    backgroundColor: BRAND_COLORS.ACCENT + '20',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  upgradeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: BRAND_COLORS.ACCENT,
+  },
+  subscriptionArrow: {
+    marginLeft: 12,
+  },
+  // Enhanced Logout Styles
+  logoutButton: {
+    backgroundColor: '#fef2f2',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  logoutContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoutIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#fee2e2',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  logoutEmoji: {
+    fontSize: 24,
+  },
+  logoutInfo: {
+    flex: 1,
+  },
+  logoutTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#dc2626',
+    marginBottom: 4,
+  },
+  logoutSubtitle: {
+    fontSize: 14,
+    color: '#991b1b',
+  },
+  // Enhanced Version Styles
+  versionCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  versionSubtext: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 })

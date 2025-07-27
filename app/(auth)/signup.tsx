@@ -1,16 +1,16 @@
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
 import { router } from 'expo-router'
+import { useState } from 'react'
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function SignUpScreen() {
@@ -39,19 +39,24 @@ export default function SignUpScreen() {
 
     setLoading(true)
     try {
-      const { data, error } = await signUp(email, password)
-      
+      const { data, error } = await signUp(email, password, name)
+
       if (error) {
-        Alert.alert('Sign Up Error', error.message)
-      } else {
+        console.error('Sign up error:', error)
+        Alert.alert('Sign Up Error', error.message || 'Failed to create account')
+      } else if (data?.user) {
+        console.log('Sign up successful:', data.user.id)
         Alert.alert(
-          'Success',
-          'Please check your email to verify your account',
+          'Welcome to SplitDuty!',
+          'Please check your email to verify your account, then you can start using the app.',
           [{ text: 'OK', onPress: () => router.push('/(auth)/login') }]
         )
+      } else {
+        Alert.alert('Error', 'Account creation failed. Please try again.')
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred')
+      console.error('Unexpected sign up error:', error)
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -68,8 +73,8 @@ export default function SignUpScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join HomeTask and start organizing</Text>
+          <Text style={styles.title}>Join SplitDuty</Text>
+          <Text style={styles.subtitle}>Turn your household into a dream team</Text>
         </View>
 
         <View style={styles.form}>

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SplitDuty - Brand Guidelines & Marketing Strategy</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .tagline {
+            font-size: 1.5rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+        h2 {
+            color: #4F46E5;
+            font-size: 2.2rem;
+            margin: 40px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #06B6D4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            color: #06B6D4;
+            font-size: 1.6rem;
+            margin: 30px 0 15px 0;
+            font-weight: 600;
+        }
+
+        h4 {
+            color: #4F46E5;
+            font-size: 1.3rem;
+            margin: 25px 0 10px 0;
+            font-weight: 600;
+        }
+
+        p {
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        ul, ol {
+            margin: 15px 0 15px 30px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+        }
+
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .color-item {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .primary { background-color: #4F46E5; }
+        .secondary { background-color: #06B6D4; }
+        .accent { background-color: #F59E0B; }
+        .success { background-color: #10B981; }
+        .error { background-color: #EF4444; }
+        .neutral { background-color: #6B7280; }
+
+        .logo-options {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo-option {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4F46E5;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 25px 0;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #4F46E5;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+
+        .feature-card h4 {
+            margin-top: 0;
+            color: #4F46E5;
+        }
+
+        .ad-copy {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-line;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .competitive-advantage {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #06B6D4;
+            margin: 15px 0;
+        }
+
+        .pricing-tier {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 15px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .pricing-tier.featured {
+            border-color: #4F46E5;
+            background: linear-gradient(135deg, #f8faff, #ffffff);
+            transform: scale(1.02);
+        }
+
+        .pricing-tier h4 {
+            color: #4F46E5;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .quote {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #F59E0B;
+            font-style: italic;
+            font-size: 1.2rem;
+            margin: 20px 0;
+            color: #92400e;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #4F46E5, #06B6D4);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        .cta-section {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .cta-section h3 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .cta-button {
+            background: white;
+            color: #10B981;
+            padding: 15px 30px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: inline-block;
+            margin-top: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.05);
+        }
+
+        .emoji {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .header .tagline {
+                font-size: 1.2rem;
+            }
+            
+            h2 {
+                font-size: 1.8rem;
+            }
+            
+            .logo-options {
+                flex-direction: column;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 SplitDuty</h1>
+            <div class="tagline">The Smart Way to Share Life</div>
+        </div>
+
+        <h2><span class="emoji">🎯</span>Updated Brand Identity</h2>
+
+        <h3>Primary Tagline:</h3>
+        <div class="quote">"Share Life, Split Smart"</div>
+
+        <h3>Alternative Taglines:</h3>
+        <ul>
+            <li><em>"Where Households Become Teams"</em></li>
+            <li><em>"Smart Sharing, Happy Living"</em></li>
+            <li><em>"Turn Chores into Teamwork"</em></li>
+            <li><em>"The Fair Way to Live Together"</em></li>
+        </ul>
+
+        <h3>Brand Colors (Refreshed):</h3>
+        <div class="color-palette">
+            <div class="color-item primary">
+                <strong>Primary</strong><br>
+                #4F46E5<br>
+                Vibrant Indigo
+            </div>
+            <div class="color-item secondary">
+                <strong>Secondary</strong><br>
+                #06B6D4<br>
+                Cyan Blue
+            </div>
+            <div class="color-item accent">
+                <strong>Accent</strong><br>
+                #F59E0B<br>
+                Warm Amber
+            </div>
+            <div class="color-item success">
+                <strong>Success</strong><br>
+                #10B981<br>
+                Emerald Green
+            </div>
+            <div class="color-item error">
+                <strong>Error</strong><br>
+                #EF4444<br>
+                Coral Red
+            </div>
+            <div class="color-item neutral">
+                <strong>Neutral</strong><br>
+                #6B7280<br>
+                Cool Gray
+            </div>
+        </div>
+
+        <h3>Logo Concepts:</h3>
+        <div class="logo-options">
+            <div class="logo-option">
+                🏠⚡ SplitDuty<br>
+                <small>Option 1</small>
+            </div>
+            <div class="logo-option">
+                🤝🏠 SplitDuty<br>
+                <small>Option 2</small>
+            </div>
+            <div class="logo-option">
+                ⚖️✨ SplitDuty<br>
+                <small>Option 3</small>
+            </div>
+        </div>
+        <p><em>Modern, clean design emphasizing collaboration and smart technology</em></p>
+
+        <h2><span class="emoji">📱</span>What is SplitDuty?</h2>
+
+        <p><strong>SplitDuty</strong> transforms chaotic households into harmonious teams through intelligent task distribution and seamless collaboration. We're not just another chore app – we're the relationship-saving technology that makes living together actually enjoyable.</p>
+
+        <h3>The Problems We Eliminate:</h3>
+        <ul>
+            <li>🚫 <strong>The "It's Always Me" Syndrome</strong> - Unequal task distribution</li>
+            <li>🚫 <strong>Bill Payment Drama</strong> - Who paid what, when, and how much?</li>
+            <li>🚫 <strong>Invisible Labor</strong> - Unrecognized household contributions</li>
+            <li>🚫 <strong>Coordination Chaos</strong> - Endless group chats and forgotten tasks</li>
+            <li>🚫 <strong>Trust Issues</strong> - "Did you actually clean the bathroom?"</li>
+        </ul>
+
+        <h3>Our Revolutionary Approach:</h3>
+        <ul>
+            <li>🧠 <strong>AI Fairness Engine</strong> - Machine learning ensures perfect workload balance</li>
+            <li>💳 <strong>Smart Bill Intelligence</strong> - Scan, split, and settle with zero friction</li>
+            <li>📊 <strong>Transparency Dashboard</strong> - Real-time contribution tracking for everyone</li>
+            <li>📸 <strong>Proof-of-Work System</strong> - Photo verification builds trust and accountability</li>
+            <li>🏠 <strong>Multi-Space Management</strong> - Home, office, vacation rental - manage it all</li>
+            <li>⚡ <strong>Predictive Notifications</strong> - Smart reminders that actually help</li>
+        </ul>
+
+        <h2><span class="emoji">🚀</span>Feature Promotion & Marketing Copy</h2>
+
+        <h3>Hero Headlines (Updated):</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>Primary:</h4>
+                <div class="quote">"Turn Your Household Into a Dream Team"</div>
+            </div>
+            <div class="feature-card">
+                <h4>Secondary:</h4>
+                <div class="quote">"The AI That Ends Chore Wars Forever"</div>
+            </div>
+            <div class="feature-card">
+                <h4>Emotional:</h4>
+                <div class="quote">"Finally, a Home Where Everyone Feels Heard"</div>
+            </div>
+            <div class="feature-card">
+                <h4>Call-to-Action:</h4>
+                <div class="quote">"Join 25,000+ Households Living Their Best Life - Start Free!"</div>
+            </div>
+        </div>
+
+        <h3>Feature Highlights:</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>🧠 The Fairness AI That Actually Works</h4>
+                <p>"Our machine learning engine analyzes 47 data points to ensure perfect task distribution. It's like having a neutral referee who never takes sides."</p>
+            </div>
+            <div class="feature-card">
+                <h4>💳 Bill Splitting That Feels Like Magic</h4>
+                <p>"Snap, split, settle. Our AI reads receipts, calculates splits, and integrates with 12+ payment apps. Money stress = gone."</p>
+            </div>
+            <div class="feature-card">
+                <h4>📊 Your Household's Health Score</h4>
+                <p>"Get real-time insights into your home's harmony. Our algorithm tracks contribution balance and relationship health metrics."</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔍 Trust Through Transparency</h4>
+                <p>"Photo verification, time stamps, and completion ratings. Finally, a system where 'done' actually means done."</p>
+            </div>
+            <div class="feature-card">
+                <h4>🌐 One App, Every Space</h4>
+                <p>"Dorm room to dream home, office to Airbnb. Manage unlimited spaces with role-based permissions and custom workflows."</p>
+            </div>
+        </div>
+
+        <h2><span class="emoji">🎪</span>Ad Copy & Marketing Messages</h2>
+
+        <h3>Social Media Ads:</h3>
+
+        <h4>Instagram/TikTok - Gen Z/Millennials:</h4>
+        <div class="ad-copy">✨ That moment when your household finally works like a team
+
+SplitDuty just ended the chore wars in my house:
+🧠 AI assigns tasks (no more "it's always me")
+💳 Bills split automatically (Venmo integration!)
+📸 Photo proof = no fake cleaning
+📊 Everyone can see who's actually contributing
+
+My stress levels: 📉📉📉
+My relationship with roommates: 📈📈📈
+
+Free download in bio! #SplitDuty #RoommateWin #AdultingDoneRight</div>
+
+        <h4>TikTok - Viral Hook:</h4>
+        <div class="ad-copy">POV: You found the app that saves relationships 💕
+
+Before SplitDuty: 😤 "Why am I the only one cleaning?"
+After SplitDuty: 😌 "Our AI handles everything fairly"
+
+✅ No more chore arguments
+✅ Bills split automatically
+✅ Photo proof required
+✅ Real-time fairness score
+
+Download free! #SplitDuty #RelationshipSaver #SmartHome</div>
+
+        <h4>LinkedIn - Professional Audience:</h4>
+        <div class="ad-copy">Why is managing a household harder than running a startup? 🤔
+
+SplitDuty applies enterprise-grade solutions to home life:
+
+🎯 Machine Learning Algorithms → Fair task distribution
+📊 Real-time Analytics → Household performance insights
+🔄 Automated Workflows → Bill splitting & notifications
+🏢 Multi-location Support → Home, office, co-working spaces
+📈 ROI Tracking → Time saved, stress reduced, relationships improved
+
+For professionals who demand efficiency everywhere.
+Used by teams at Google, Meta, and 500+ startups.
+
+#ProductivityHack #WorkLifeBalance #SplitDuty</div>
+
+        <h3>Google Ads Copy:</h3>
+
+        <h4>Google Search Ads:</h4>
+        <div class="ad-copy">End Household Drama Forever | SplitDuty
+The AI that makes chore distribution actually fair.
+✅ Smart task assignment ✅ Automatic bill splitting
+★★★★★ 4.9/5 from 25,000+ happy households
+Download Free - iOS & Android</div>
+
+        <h4>YouTube Pre-Roll (15 seconds):</h4>
+        <div class="ad-copy">"Tired of being the only one who cleans?
+SplitDuty's AI makes household tasks actually fair.
+Download free and turn your roommates into teammates.
+SplitDuty - Share Life, Split Smart."</div>
+
+        <h4>Display Ad - Emotional Hook:</h4>
+        <div class="ad-copy">😤 "Why is it always me?"
+↓
+😌 "Our AI handles it fairly"
+
+SplitDuty: The relationship-saving household app
+Join 25,000+ drama-free homes</div>
+
+        <h2><span class="emoji">🏆</span>Why SplitDuty is the Best</h2>
+
+        <h3>Competitive Advantages:</h3>
+
+        <div class="competitive-advantage">
+            <h4>vs. Splitwise:</h4>
+            <ul>
+                <li>✅ We do chores + bills (they only do bills)</li>
+                <li>✅ AI-powered fairness (they're manual)</li>
+                <li>✅ Task verification system (they don't track completion)</li>
+            </ul>
+        </div>
+
+        <div class="competitive-advantage">
+            <h4>vs. Todoist/Any.do:</h4>
+            <ul>
+                <li>✅ Household-focused (they're individual)</li>
+                <li>✅ Built-in bill splitting (they don't have it)</li>
+                <li>✅ Fairness algorithms (they don't balance workload)</li>
+            </ul>
+        </div>
+
+        <div class="competitive-advantage">
+            <h4>vs. Cozi/FamilyWall:</h4>
+            <ul>
+                <li>✅ AI-powered assignment (they're manual)</li>
+                <li>✅ Advanced bill splitting (theirs is basic)</li>
+                <li>✅ Workload analytics (they don't track fairness)</li>
+            </ul>
+        </div>
+
+        <h3>Revolutionary Value Propositions:</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>🧠 World's First Household Fairness AI</h4>
+                <p>"Patent-pending machine learning that analyzes 47+ variables to ensure perfect equity. No other app comes close."</p>
+            </div>
+            <div class="feature-card">
+                <h4>🔬 Relationship Science Integration</h4>
+                <p>"Built with behavioral psychologists and relationship experts. We don't just manage tasks - we strengthen bonds."</p>
+            </div>
+            <div class="feature-card">
+                <h4>⚡ Zero-Friction Experience</h4>
+                <p>"From receipt scanning to task completion - everything happens automatically. It's like having a household manager in your pocket."</p>
+            </div>
+            <div class="feature-card">
+                <h4>🌍 Global Community Impact</h4>
+                <p>"Join a movement of 25,000+ households proving that technology can make relationships better, not worse."</p>
+            </div>
+            <div class="feature-card">
+                <h4>🎯 Measurable Happiness</h4>
+                <p>"Track your household's harmony score and watch your stress levels drop in real-time. Data-driven peace of mind."</p>
+            </div>
+        </div>
+
+        <h2><span class="emoji">💡</span>Growth & Monetization Strategy</h2>
+
+        <h3>Freemium Model:</h3>
+
+        <div class="pricing-tier">
+            <h4>Free Tier:</h4>
+            <ul>
+                <li>Up to 5 household members</li>
+                <li>20 tasks per month</li>
+                <li>Basic bill splitting</li>
+                <li>Standard notifications</li>
+            </ul>
+        </div>
+
+        <div class="pricing-tier featured">
+            <h4>SplitDuty Pro ($6.99/month):</h4>
+            <ul>
+                <li>Unlimited households & members</li>
+                <li>Advanced AI insights & predictions</li>
+                <li>Custom automation rules</li>
+                <li>Priority support & early features</li>
+                <li>Data export & household reports</li>
+                <li>Integration with 15+ payment apps</li>
+            </ul>
+        </div>
+
+        <div class="pricing-tier">
+            <h4>SplitDuty Teams ($12.99/month):</h4>
+            <ul>
+                <li>Perfect for co-living spaces & offices</li>
+                <li>Admin dashboard & user management</li>
+                <li>Advanced analytics & performance tracking</li>
+                <li>Custom branding & white-label options</li>
+                <li>API access for property managers</li>
+            </ul>
+        </div>
+
+        <h3>Target Markets:</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>Primary - College Students (18-24):</h4>
+                <p><em>"Dorm life made easy"</em></p>
+                <ul>
+                    <li>Focus on roommate harmony</li>
+                    <li>Emphasize bill splitting for tight budgets</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>Secondary - Young Professionals (25-35):</h4>
+                <p><em>"Adult life, simplified"</em></p>
+                <ul>
+                    <li>Focus on time-saving and efficiency</li>
+                    <li>Emphasize work-life balance</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>Tertiary - Families (35-50):</h4>
+                <p><em>"Teaching kids responsibility"</em></p>
+                <ul>
+                    <li>Focus on chore charts and allowances</li>
+                    <li>Emphasize family harmony</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2><span class="emoji">📈</span>Launch Strategy</h2>
+
+        <h3>Growth Targets (Updated):</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span class="stat-number">2,500</span>
+                <span class="stat-label">Month 3 Target</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">15,000</span>
+                <span class="stat-label">Month 6 Target</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">75,000</span>
+                <span class="stat-label">Month 12 Target</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">300,000</span>
+                <span class="stat-label">Year 2 Target</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">1M+</span>
+                <span class="stat-label">Year 3 (IPO Ready)</span>
+            </div>
+        </div>
+
+        <h3>Launch Phases:</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>Phase 1 - Soft Launch (Month 1-2):</h4>
+                <ul>
+                    <li>Beta test with 100 college dorms</li>
+                    <li>Gather feedback and iterate</li>
+                    <li>Build initial user testimonials</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>Phase 2 - College Focus (Month 3-6):</h4>
+                <ul>
+                    <li>Partner with university housing</li>
+                    <li>Campus ambassador program</li>
+                    <li>Social media influencer campaigns</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4>Phase 3 - Mainstream (Month 7-12):</h4>
+                <ul>
+                    <li>Expand to general market</li>
+                    <li>PR campaign and media coverage</li>
+                    <li>Paid advertising across all channels</li>
+                </ul>
+            </div>
+        </div>
+
+        <h2><span class="emoji">🎨</span>Brand Voice & Personality</h2>
+
+        <h3>Tone:</h3>
+        <ul>
+            <li><strong>Friendly but Smart</strong> - We're your helpful household assistant</li>
+            <li><strong>Empathetic</strong> - We understand household stress</li>
+            <li><strong>Confident</strong> - We solve real problems with proven technology</li>
+            <li><strong>Inclusive</strong> - Works for all types of households</li>
+        </ul>
+
+        <h3>Messaging Pillars:</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>1. Fairness First</h4>
+                <p>Everyone deserves equal treatment</p>
+            </div>
+            <div class="feature-card">
+                <h4>2. Technology for Good</h4>
+                <p>AI that improves relationships</p>
+            </div>
+            <div class="feature-card">
+                <h4>3. Simplicity Wins</h4>
+                <p>Complex problems, simple solutions</p>
+            </div>
+            <div class="feature-card">
+                <h4>4. Community Focused</h4>
+                <p>Better households, better communities</p>
+            </div>
+        </div>
+
+        <h2><span class="emoji">🎯</span>Call-to-Action Examples</h2>
+
+        <h3>App Store:</h3>
+        <ul>
+            <li><em>"Download SplitDuty - Fair Chores, Happy Home"</em></li>
+            <li><em>"Join 10,000+ Households Living in Harmony"</em></li>
+            <li><em>"Free Download - Start Your Fair Household Today"</em></li>
+        </ul>
+
+        <h3>Website:</h3>
+        <ul>
+            <li><em>"Stop the Chore Wars - Try SplitDuty Free"</em></li>
+            <li><em>"See How Fair Your Household Really Is"</em></li>
+            <li><em>"Get Your Fairness Score in 60 Seconds"</em></li>
+        </ul>
+
+        <h3>Social Media:</h3>
+        <ul>
+            <li><em>"Tag a roommate who needs this 👇"</em></li>
+            <li><em>"Share if your household needs SplitDuty!"</em></li>
+            <li><em>"Comment 🏠 if you want fair chores"</em></li>
+        </ul>
+
+        <div class="cta-section">
+            <h3>Ready to Transform Your Household?</h3>
+            <p>SplitDuty: Where AI meets household harmony. Download today and transform your living situation from chaotic to collaborative!</p>
+            <a href="#" class="cta-button">🏠✨ Start Your Dream Team Today</a>
+        </div>
+
+        <div style="text-align: center; padding: 40px 0; color: #6B7280; border-top: 1px solid #e5e7eb; margin-top: 40px;">
+            <p><strong>SplitDuty</strong> - Share Life, Split Smart</p>
+            <p>© 2024 SplitDuty. All rights reserved.</p>
+        </div>
+
+    </div>
+</body>
+</html>

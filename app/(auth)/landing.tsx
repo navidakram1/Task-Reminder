@@ -1,15 +1,13 @@
-import React from 'react'
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Image,
-  Dimensions,
-} from 'react-native'
-import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
+import { router } from 'expo-router'
+import {
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native'
 
 const { width, height } = Dimensions.get('window')
 
@@ -21,9 +19,9 @@ export default function LandingScreen() {
         style={styles.header}
       >
         <View style={styles.heroSection}>
-          <Text style={styles.heroTitle}>HomeTask</Text>
+          <Text style={styles.heroTitle}>SplitDuty</Text>
           <Text style={styles.heroSubtitle}>
-            Manage chores & bills together
+            Share Life, Split Smart
           </Text>
           <Text style={styles.heroDescription}>
             The easiest way to organize household tasks, split bills, and keep everyone accountable
@@ -49,7 +47,7 @@ export default function LandingScreen() {
         </View>
 
         <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Why HomeTask?</Text>
+          <Text style={styles.sectionTitle}>Why SplitDuty?</Text>
           
           <View style={styles.featureItem}>
             <View style={styles.featureIcon}>

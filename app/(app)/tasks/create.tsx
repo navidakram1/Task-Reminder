@@ -457,7 +457,7 @@ export default function CreateEditTaskScreen() {
 
                     setAssigneeId(result.assigned_to)
                     setRandomAssignment(false)
-                    Alert.alert('🎯 Smart Assignment!', result.assignment_reason)
+                    Alert.alert('🎯 SplitDuty AI Assignment!', result.assignment_reason)
                   } catch (error) {
                     // Fallback to simple random if smart assignment fails
                     if (householdMembers.length > 0) {
@@ -469,7 +469,7 @@ export default function CreateEditTaskScreen() {
                   }
                 }}
               >
-                <Text style={styles.shuffleButtonText}>🎯 Smart Assign</Text>
+                <Text style={styles.shuffleButtonText}>🎯 SplitDuty AI</Text>
               </TouchableOpacity>
             </View>
 

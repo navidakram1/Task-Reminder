@@ -351,7 +351,7 @@ export default function DashboardScreen() {
   if (!data.household) {
     return (
       <View style={styles.noHouseholdContainer}>
-        <Text style={styles.noHouseholdTitle}>Welcome to HomeTask!</Text>
+        <Text style={styles.noHouseholdTitle}>Welcome to SplitDuty!</Text>
         <Text style={styles.noHouseholdText}>
           You're not part of any household yet. Create one or join an existing household to get started.
         </Text>
@@ -534,8 +534,8 @@ export default function DashboardScreen() {
             <View style={styles.actionIconContainer}>
               <Text style={styles.actionIcon}>🎯</Text>
             </View>
-            <Text style={styles.actionTitle}>Smart Assign</Text>
-            <Text style={styles.actionSubtitle}>AI-powered fair assignment</Text>
+            <Text style={styles.actionTitle}>SplitDuty AI</Text>
+            <Text style={styles.actionSubtitle}>Fair assignment powered by AI</Text>
             <View style={styles.actionGlow} />
           </TouchableOpacity>
 

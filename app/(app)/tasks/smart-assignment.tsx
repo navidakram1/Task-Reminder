@@ -1,15 +1,15 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
@@ -176,7 +176,7 @@ export default function SmartAssignmentScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Smart Assignment</Text>
+        <Text style={styles.title}>SplitDuty AI</Text>
         <TouchableOpacity onPress={() => setShowSettings(!showSettings)}>
           <Text style={styles.settingsText}>⚙️</Text>
         </TouchableOpacity>

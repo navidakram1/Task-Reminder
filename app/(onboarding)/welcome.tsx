@@ -1,14 +1,12 @@
-import React from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Image,
-} from 'react-native'
-import { router } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
+import { router } from 'expo-router'
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native'
 
 export default function WelcomeScreen() {
   return (
@@ -19,9 +17,9 @@ export default function WelcomeScreen() {
       >
         <View style={styles.welcomeContent}>
           <Text style={styles.welcomeEmoji}>🎉</Text>
-          <Text style={styles.welcomeTitle}>Welcome to HomeTask!</Text>
+          <Text style={styles.welcomeTitle}>Welcome to SplitDuty!</Text>
           <Text style={styles.welcomeSubtitle}>
-            Let's get you set up with your household
+            Let's turn your household into a dream team
           </Text>
         </View>
       </LinearGradient>
@@ -85,7 +83,7 @@ export default function WelcomeScreen() {
           <View style={styles.featuresList}>
             <View style={styles.featureItem}>
               <Text style={styles.featureIcon}>✅</Text>
-              <Text style={styles.featureText}>Smart task reminders</Text>
+              <Text style={styles.featureText}>AI-powered fair assignment</Text>
             </View>
             
             <View style={styles.featureItem}>

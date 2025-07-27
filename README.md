@@ -1,22 +1,22 @@
-# HomeTask Reminder App
+# 🏠 SplitDuty - Share Life, Split Smart
 
-A cross-platform household management app to track chores, split bills, and manage tasks efficiently for families and roommates.
+A revolutionary household management app that uses AI to ensure fair task distribution and seamless bill splitting for modern households.
 
 ---
 
 ## 🚀 Overview
-HomeTask helps households manage chores, split bills, and collaborate with features like reminders, random task assignment, approvals, and more.
+SplitDuty transforms chaotic households into harmonious teams through intelligent task distribution, automatic bill splitting, and real-time collaboration features.
 
 ---
 
-## ✨ Features
-- Task Reminders (Email + Push)
-- Bill Splitting (Splitwise-like)
-- Random Task Assignment
-- Task Approval System
-- Multi-User Collaboration
-- Subscription Plans (Free, Monthly, Lifetime)
-- Cross-Platform (Mobile + Web)
+## ✨ Revolutionary Features
+- 🧠 **AI Fairness Engine** - Machine learning ensures perfect task distribution
+- 💳 **Smart Bill Splitting** - Scan receipts, split instantly, settle with one tap
+- 📊 **Real-time Fairness Score** - Track household harmony and contribution balance
+- 📸 **Proof-of-Work System** - Photo verification builds trust and accountability
+- 🏠 **Multi-Household Support** - Manage home, office, vacation rentals in one app
+- ⚡ **Predictive Notifications** - Smart reminders that actually help
+- 🎯 **Conflict Resolution** - Designed to strengthen relationships, not strain them
 
 ---
 

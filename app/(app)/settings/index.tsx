@@ -506,7 +506,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>HomeTask v1.0.0</Text>
+          <Text style={styles.versionText}>SplitDuty v1.0.0</Text>
         </View>
       </ScrollView>
     </View>

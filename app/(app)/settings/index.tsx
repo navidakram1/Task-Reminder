@@ -2,15 +2,19 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
+    Animated,
     Dimensions,
     Image,
+    Platform,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Switch,
     Text,
     TouchableOpacity,
     View
 } from 'react-native'
+import { BRAND_COLORS, BRAND_NAME } from '../../../constants/Brand'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
@@ -226,7 +230,7 @@ export default function SettingsScreen() {
               ]}
             >
               <Text style={styles.title}>⚙️ Settings</Text>
-              <Text style={styles.subtitle}>Manage your {BRAND_NAME} experience</Text>
+              <Text style={styles.subtitle}>Manage your {BRAND_NAME || 'SplitDuty'} experience</Text>
               <View style={styles.headerStats}>
                 <View style={styles.statItem}>
                   <Text style={styles.statNumber}>
@@ -465,7 +469,7 @@ export default function SettingsScreen() {
               <Switch
                 value={notifications.email}
                 onValueChange={(value) => handleNotificationToggle('email', value)}
-                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.PRIMARY }}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS?.PRIMARY || '#4F46E5' }}
                 thumbColor={notifications.email ? '#fff' : '#f9fafb'}
                 ios_backgroundColor="#e5e7eb"
               />
@@ -484,7 +488,7 @@ export default function SettingsScreen() {
               <Switch
                 value={notifications.push}
                 onValueChange={(value) => handleNotificationToggle('push', value)}
-                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.PRIMARY }}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS?.PRIMARY || '#4F46E5' }}
                 thumbColor={notifications.push ? '#fff' : '#f9fafb'}
                 ios_backgroundColor="#e5e7eb"
               />
@@ -503,7 +507,7 @@ export default function SettingsScreen() {
               <Switch
                 value={notifications.taskReminders}
                 onValueChange={(value) => handleNotificationToggle('taskReminders', value)}
-                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.SECONDARY }}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS?.SECONDARY || '#06B6D4' }}
                 thumbColor={notifications.taskReminders ? '#fff' : '#f9fafb'}
                 ios_backgroundColor="#e5e7eb"
               />
@@ -522,7 +526,7 @@ export default function SettingsScreen() {
               <Switch
                 value={notifications.billAlerts}
                 onValueChange={(value) => handleNotificationToggle('billAlerts', value)}
-                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS.ACCENT }}
+                trackColor={{ false: '#e5e7eb', true: BRAND_COLORS?.ACCENT || '#F59E0B' }}
                 thumbColor={notifications.billAlerts ? '#fff' : '#f9fafb'}
                 ios_backgroundColor="#e5e7eb"
               />
@@ -634,7 +638,7 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.logoutInfo}>
                 <Text style={styles.logoutTitle}>Sign Out</Text>
-                <Text style={styles.logoutSubtitle}>Sign out of your {BRAND_NAME} account</Text>
+                <Text style={styles.logoutSubtitle}>Sign out of your {BRAND_NAME || 'SplitDuty'} account</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -650,7 +654,7 @@ export default function SettingsScreen() {
           ]}
         >
           <View style={styles.versionCard}>
-            <Text style={styles.versionText}>{BRAND_NAME} v1.0.0</Text>
+            <Text style={styles.versionText}>{BRAND_NAME || 'SplitDuty'} v1.0.0</Text>
             <Text style={styles.versionSubtext}>Share Life, Split Smart</Text>
           </View>
         </Animated.View>
@@ -675,7 +679,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    paddingTop: Platform.OS === 'ios' ? 60 : StatusBar.currentHeight + 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight || 0) + 20,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 25,
@@ -690,7 +694,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   headerGradient: {
-    background: `linear-gradient(135deg, ${BRAND_COLORS.PRIMARY} 0%, ${BRAND_COLORS.SECONDARY} 100%)`,
+    backgroundColor: BRAND_COLORS?.PRIMARY || '#4F46E5',
   },
   backText: {
     fontSize: 16,
@@ -703,7 +707,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: BRAND_COLORS.PRIMARY,
+    color: BRAND_COLORS?.PRIMARY || '#4F46E5',
     textAlign: 'center',
   },
   subtitle: {
@@ -727,7 +731,7 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: BRAND_COLORS.PRIMARY,
+    color: BRAND_COLORS?.PRIMARY || '#4F46E5',
   },
   statLabel: {
     fontSize: 12,
@@ -890,7 +894,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   profileBadge: {
-    backgroundColor: BRAND_COLORS.PRIMARY + '20',
+    backgroundColor: (BRAND_COLORS?.PRIMARY || '#4F46E5') + '20',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -900,7 +904,7 @@ const styles = StyleSheet.create({
   profileBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: BRAND_COLORS.PRIMARY,
+    color: BRAND_COLORS?.PRIMARY || '#4F46E5',
   },
   profileArrow: {
     marginLeft: 12,
@@ -1016,8 +1020,8 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   subscriptionCardPro: {
-    borderColor: BRAND_COLORS.PRIMARY,
-    backgroundColor: BRAND_COLORS.PRIMARY + '05',
+    borderColor: BRAND_COLORS?.PRIMARY || '#4F46E5',
+    backgroundColor: (BRAND_COLORS?.PRIMARY || '#4F46E5') + '05',
   },
   subscriptionContent: {
     flexDirection: 'row',
@@ -1027,7 +1031,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: BRAND_COLORS.PRIMARY + '20',
+    backgroundColor: (BRAND_COLORS?.PRIMARY || '#4F46E5') + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -1049,7 +1053,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   upgradeHint: {
-    backgroundColor: BRAND_COLORS.ACCENT + '20',
+    backgroundColor: (BRAND_COLORS?.ACCENT || '#F59E0B') + '20',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1059,7 +1063,7 @@ const styles = StyleSheet.create({
   upgradeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: BRAND_COLORS.ACCENT,
+    color: BRAND_COLORS?.ACCENT || '#F59E0B',
   },
   subscriptionArrow: {
     marginLeft: 12,

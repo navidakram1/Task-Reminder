@@ -72,7 +72,7 @@ supabase/
 - Android Studio/Emulator (for Android development)
 
 ### Installation
-
+npx expo start --android
 1. **Install dependencies**
    ```bash
    npm install

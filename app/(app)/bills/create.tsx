@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native'
 import { useAuth } from '../../../contexts/AuthContext'
+import { fileUploadService } from '../../../lib/fileUploadService'
 import { supabase } from '../../../lib/supabase'
 
 interface Split {
@@ -312,7 +313,7 @@ export default function CreateEditBillScreen() {
         amount: parseFloat(amount),
         category: category || null,
         date,
-        receipt_url: receiptUri,
+        receipt_url: null, // Will be updated after upload
         household_id: household.id,
         paid_by: user?.id,
       }
@@ -343,6 +344,22 @@ export default function CreateEditBillScreen() {
 
         if (error) throw error
         billId = data.id
+      }
+
+      // Upload receipt photo if selected
+      if (receiptUri && billId) {
+        const uploadResult = await fileUploadService.uploadReceiptPhoto(receiptUri, billId)
+
+        if (uploadResult.success) {
+          // Update bill with receipt URL
+          await supabase
+            .from('bills')
+            .update({ receipt_url: uploadResult.url })
+            .eq('id', billId)
+        } else {
+          console.warn('Receipt upload failed:', uploadResult.error)
+          // Continue with bill creation even if receipt upload fails
+        }
       }
 
       // Create new splits

@@ -1,19 +1,19 @@
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Image,
-  Switch,
-} from 'react-native'
-import { router } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import { supabase } from '../../lib/supabase'
+import { router } from 'expo-router'
+import { useState } from 'react'
+import {
+    Alert,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function ProfileSetupScreen() {
   const [name, setName] = useState('')
@@ -101,9 +101,14 @@ export default function ProfileSetupScreen() {
 
       // Upload photo if selected
       if (photoUri) {
-        // In a real app, you would upload the image to Supabase Storage
-        // For now, we'll just use the local URI
-        photoUrl = photoUri
+        const uploadResult = await fileUploadService.uploadProfilePhoto(photoUri, user.id)
+
+        if (uploadResult.success) {
+          photoUrl = uploadResult.url
+        } else {
+          console.warn('Photo upload failed:', uploadResult.error)
+          // Continue with profile setup even if photo upload fails
+        }
       }
 
       // Update user profile

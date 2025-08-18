@@ -1,5 +1,6 @@
 import { Session, User } from '@supabase/supabase-js'
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
 
 interface AuthContextType {
@@ -8,6 +9,8 @@ interface AuthContextType {
   loading: boolean
   signUp: (email: string, password: string, name?: string) => Promise<any>
   signIn: (email: string, password: string) => Promise<any>
+  signInWithGoogle: () => Promise<any>
+  signInWithApple: () => Promise<any>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<any>
 }
@@ -104,6 +107,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const signInWithGoogle = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web OAuth flow
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+        return { data, error }
+      } else {
+        // Mobile OAuth flow - for now, show a message that it needs to be configured
+        // In a real app, you'd use expo-auth-session or similar
+        return {
+          data: null,
+          error: {
+            message: 'Social authentication on mobile requires additional setup. Please use email/password for now.'
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Google sign in error:', error)
+      return { data: null, error }
+    }
+  }
+
+  const signInWithApple = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web OAuth flow
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'apple',
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+        return { data, error }
+      } else {
+        // Mobile OAuth flow - for now, show a message that it needs to be configured
+        return {
+          data: null,
+          error: {
+            message: 'Social authentication on mobile requires additional setup. Please use email/password for now.'
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Apple sign in error:', error)
+      return { data: null, error }
+    }
+  }
+
   const resetPassword = async (email: string) => {
     const { data, error } = await supabase.auth.resetPasswordForEmail(email)
     return { data, error }
@@ -115,6 +171,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
+    signInWithApple,
     signOut,
     resetPassword,
   }

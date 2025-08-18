@@ -1,23 +1,24 @@
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
 import { router } from 'expo-router'
+import { useState } from 'react'
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth()
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -42,8 +43,34 @@ export default function LoginScreen() {
     }
   }
 
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert('Coming Soon', `${provider} login will be available soon`)
+  const handleSocialLogin = async (provider: 'Google' | 'Apple') => {
+    setSocialLoading(provider)
+    try {
+      let result
+      if (provider === 'Google') {
+        result = await signInWithGoogle()
+      } else {
+        result = await signInWithApple()
+      }
+
+      const { data, error } = result
+
+      if (error) {
+        Alert.alert('Social Login Error', error.message)
+      } else if (data?.url) {
+        // For mobile, we need to handle the OAuth redirect
+        // This will open the browser for authentication
+        Alert.alert(
+          'Authentication Required',
+          'You will be redirected to complete the sign-in process.',
+          [{ text: 'Continue', onPress: () => {} }]
+        )
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred during social login')
+    } finally {
+      setSocialLoading(null)
+    }
   }
 
   return (
@@ -108,17 +135,23 @@ export default function LoginScreen() {
 
           <View style={styles.socialButtons}>
             <TouchableOpacity
-              style={styles.socialButton}
+              style={[styles.socialButton, socialLoading === 'Google' && styles.disabledButton]}
               onPress={() => handleSocialLogin('Google')}
+              disabled={socialLoading !== null}
             >
-              <Text style={styles.socialButtonText}>🔍 Google</Text>
+              <Text style={styles.socialButtonText}>
+                {socialLoading === 'Google' ? '🔄 Connecting...' : '🔍 Google'}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.socialButton}
+              style={[styles.socialButton, socialLoading === 'Apple' && styles.disabledButton]}
               onPress={() => handleSocialLogin('Apple')}
+              disabled={socialLoading !== null}
             >
-              <Text style={styles.socialButtonText}>🍎 Apple</Text>
+              <Text style={styles.socialButtonText}>
+                {socialLoading === 'Apple' ? '🔄 Connecting...' : '🍎 Apple'}
+              </Text>
             </TouchableOpacity>
           </View>
 

@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  Share,
-  Clipboard,
-} from 'react-native'
 import { router } from 'expo-router'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    Alert,
+    Clipboard,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
+import { supabase } from '../../lib/supabase'
 
 export default function InviteMembersScreen() {
   const [email, setEmail] = useState('')
@@ -62,14 +62,25 @@ export default function InviteMembersScreen() {
 
     setLoading(true)
     try {
-      // In a real app, you would send an email invitation here
-      // For now, we'll just show a success message
-      Alert.alert(
-        'Invitation Sent!',
-        `An invitation has been sent to ${email}`,
-        [{ text: 'OK', onPress: () => setEmail('') }]
-      )
+      // Send email invitation using the email service
+      const result = await emailService.sendHouseholdInvitation({
+        recipient: email.trim(),
+        inviterName: user?.user_metadata?.name || user?.email || 'Someone',
+        householdName: household.name,
+        inviteCode: household.invite_code
+      })
+
+      if (result.success) {
+        Alert.alert(
+          'Invitation Sent!',
+          `An invitation has been sent to ${email}`,
+          [{ text: 'OK', onPress: () => setEmail('') }]
+        )
+      } else {
+        Alert.alert('Error', 'Failed to send invitation. Please try again.')
+      }
     } catch (error) {
+      console.error('Email invitation error:', error)
       Alert.alert('Error', 'Failed to send invitation')
     } finally {
       setLoading(false)

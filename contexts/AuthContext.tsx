@@ -60,32 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { data, error }
       }
 
-      // If sign up was successful and we have a user, create profile
+      // If sign up was successful, the database trigger will automatically create the profile
       if (data.user && !error) {
         console.log('User signed up successfully:', data.user.id)
-
-        // Note: Profile creation will be handled by database triggers
-        // or we can create it manually here if needed
-        try {
-          // Optional: Create a profile record in our custom users table
-          const { error: profileError } = await supabase
-            .from('users')
-            .insert({
-              id: data.user.id,
-              email: data.user.email,
-              name: name || '',
-              created_at: new Date().toISOString()
-            })
-
-          if (profileError) {
-            console.warn('Profile creation failed (this might be expected):', profileError.message)
-            // Don't fail the signup if profile creation fails
-            // The user metadata in auth.users should be sufficient
-          }
-        } catch (profileError) {
-          console.warn('Profile creation error:', profileError)
-          // Continue with successful auth signup
-        }
+        // Profile creation is handled by database triggers
       }
 
       return { data, error }

@@ -479,13 +479,6 @@ export default function SignUpScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
-
-          <Text style={styles.termsText}>
-            By creating an account, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
   )
 }
 

@@ -1,10 +1,11 @@
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
     Animated,
     Dimensions,
+    Platform,
     ScrollView,
     StatusBar,
     StyleSheet,

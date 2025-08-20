@@ -1,6 +1,7 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
+    Alert,
     Modal,
     Platform,
     RefreshControl,
@@ -18,6 +19,13 @@ interface DashboardData {
   pendingTransfers: any[]
   recentBills: any[]
   household: any
+  analytics: {
+    tasksCompleted: number
+    totalSpent: number
+    avgTasksPerWeek: number
+    householdEfficiency: number
+  }
+  activityFeed: any[]
 }
 
 interface Household {
@@ -37,6 +45,13 @@ export default function DashboardScreen() {
     pendingTransfers: [],
     recentBills: [],
     household: null,
+    analytics: {
+      tasksCompleted: 0,
+      totalSpent: 0,
+      avgTasksPerWeek: 0,
+      householdEfficiency: 0,
+    },
+    activityFeed: [],
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -260,11 +275,101 @@ export default function DashboardScreen() {
         bills = []
       }
 
+      // Fetch analytics data
+      let analytics = {
+        tasksCompleted: 0,
+        totalSpent: 0,
+        avgTasksPerWeek: 0,
+        householdEfficiency: 0,
+      }
+
+      try {
+        // Get completed tasks count for this month
+        const { count: completedCount } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('household_id', householdId)
+          .eq('status', 'completed')
+          .gte('updated_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+
+        // Get total spending for this month
+        const { data: spendingData } = await supabase
+          .from('bills')
+          .select('amount')
+          .eq('household_id', householdId)
+          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+
+        const totalSpent = spendingData?.reduce((sum, bill) => sum + bill.amount, 0) || 0
+
+        // Calculate average tasks per week (last 4 weeks)
+        const fourWeeksAgo = new Date()
+        fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
+
+        const { count: recentTasksCount } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('household_id', householdId)
+          .gte('created_at', fourWeeksAgo.toISOString())
+
+        const avgTasksPerWeek = Math.round((recentTasksCount || 0) / 4)
+
+        // Calculate household efficiency (completed vs total tasks ratio)
+        const { count: totalTasksCount } = await supabase
+          .from('tasks')
+          .select('*', { count: 'exact', head: true })
+          .eq('household_id', householdId)
+          .gte('created_at', fourWeeksAgo.toISOString())
+
+        const efficiency = totalTasksCount ? Math.round(((recentTasksCount || 0) / totalTasksCount) * 100) : 0
+
+        analytics = {
+          tasksCompleted: completedCount || 0,
+          totalSpent,
+          avgTasksPerWeek,
+          householdEfficiency: efficiency,
+        }
+      } catch (error) {
+        console.error('Error fetching analytics:', error)
+      }
+
+      // Fetch activity feed
+      let activityFeed = []
+      try {
+        // Get recent activities (tasks created, completed, bills added)
+        const { data: recentActivities } = await supabase
+          .from('tasks')
+          .select(`
+            id,
+            title,
+            status,
+            created_at,
+            updated_at,
+            assignee_id,
+            profiles:assignee_id (name, email)
+          `)
+          .eq('household_id', householdId)
+          .order('updated_at', { ascending: false })
+          .limit(10)
+
+        activityFeed = recentActivities?.map(activity => ({
+          id: activity.id,
+          type: 'task',
+          title: activity.title,
+          status: activity.status,
+          timestamp: activity.updated_at,
+          user: activity.profiles?.name || activity.profiles?.email?.split('@')[0] || 'Someone',
+        })) || []
+      } catch (error) {
+        console.error('Error fetching activity feed:', error)
+      }
+
       console.log('About to setData with:', {
         upcomingTasks: tasks?.length || 0,
         pendingTransfers: transferRequests?.length || 0,
         recentBills: bills?.length || 0,
-        household: householdData?.name || 'No household'
+        household: householdData?.name || 'No household',
+        analytics,
+        activityFeed: activityFeed.length
       })
 
       setData({
@@ -275,6 +380,8 @@ export default function DashboardScreen() {
           ...householdData,
           userRole: userRole,
         },
+        analytics,
+        activityFeed,
       })
 
       console.log('setData completed successfully')
@@ -626,6 +733,94 @@ export default function DashboardScreen() {
             <Text style={styles.featureDescription}>Verify completed tasks with photo proof</Text>
           </View>
         </ScrollView>
+      </View>
+
+      {/* Analytics Widgets */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📊 Household Analytics</Text>
+        <View style={styles.analyticsGrid}>
+          <View style={[styles.analyticsCard, styles.analyticsCard1]}>
+            <View style={styles.analyticsIconContainer}>
+              <Text style={styles.analyticsIcon}>✅</Text>
+            </View>
+            <Text style={styles.analyticsNumber}>{data.analytics.tasksCompleted}</Text>
+            <Text style={styles.analyticsLabel}>Tasks Completed</Text>
+            <Text style={styles.analyticsSubtext}>This month</Text>
+          </View>
+
+          <View style={[styles.analyticsCard, styles.analyticsCard2]}>
+            <View style={styles.analyticsIconContainer}>
+              <Text style={styles.analyticsIcon}>💰</Text>
+            </View>
+            <Text style={styles.analyticsNumber}>${data.analytics.totalSpent.toFixed(0)}</Text>
+            <Text style={styles.analyticsLabel}>Total Spent</Text>
+            <Text style={styles.analyticsSubtext}>This month</Text>
+          </View>
+
+          <View style={[styles.analyticsCard, styles.analyticsCard3]}>
+            <View style={styles.analyticsIconContainer}>
+              <Text style={styles.analyticsIcon}>📈</Text>
+            </View>
+            <Text style={styles.analyticsNumber}>{data.analytics.avgTasksPerWeek}</Text>
+            <Text style={styles.analyticsLabel}>Avg Tasks/Week</Text>
+            <Text style={styles.analyticsSubtext}>Last 4 weeks</Text>
+          </View>
+
+          <View style={[styles.analyticsCard, styles.analyticsCard4]}>
+            <View style={styles.analyticsIconContainer}>
+              <Text style={styles.analyticsIcon}>⚡</Text>
+            </View>
+            <Text style={styles.analyticsNumber}>{data.analytics.householdEfficiency}%</Text>
+            <Text style={styles.analyticsLabel}>Efficiency</Text>
+            <Text style={styles.analyticsSubtext}>Completion rate</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Activity Feed */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🔔 Recent Activity</Text>
+          <TouchableOpacity onPress={() => router.push('/(app)/household/activity')}>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {data.activityFeed.length > 0 ? (
+          <View style={styles.activityFeedContainer}>
+            {data.activityFeed.slice(0, 5).map((activity, index) => (
+              <View key={activity.id} style={styles.activityItem}>
+                <View style={styles.activityIconContainer}>
+                  <Text style={styles.activityIcon}>
+                    {activity.type === 'task' && activity.status === 'completed' ? '✅' :
+                     activity.type === 'task' ? '📋' :
+                     activity.type === 'bill' ? '💰' : '🔔'}
+                  </Text>
+                </View>
+                <View style={styles.activityContent}>
+                  <Text style={styles.activityTitle}>
+                    {activity.status === 'completed' ? 'Completed' : 'Created'} task: {activity.title}
+                  </Text>
+                  <Text style={styles.activityUser}>by {activity.user}</Text>
+                  <Text style={styles.activityTime}>
+                    {new Date(activity.timestamp).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.activityIndicator} />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No recent activity</Text>
+            <Text style={styles.emptyStateSubtext}>Start creating tasks to see activity here</Text>
+          </View>
+        )}
       </View>
 
       {/* Navigation Guide */}
@@ -2012,5 +2207,135 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  // Analytics Widgets Styles
+  analyticsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  analyticsCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    flex: 1,
+    minWidth: '45%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+    borderLeftWidth: 4,
+  },
+  analyticsCard1: {
+    borderLeftColor: '#4caf50',
+    backgroundColor: '#f8fff9',
+  },
+  analyticsCard2: {
+    borderLeftColor: '#ff9800',
+    backgroundColor: '#fffef8',
+  },
+  analyticsCard3: {
+    borderLeftColor: '#2196f3',
+    backgroundColor: '#f8fcff',
+  },
+  analyticsCard4: {
+    borderLeftColor: '#9c27b0',
+    backgroundColor: '#fef8ff',
+  },
+  analyticsIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  analyticsIcon: {
+    fontSize: 24,
+  },
+  analyticsNumber: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#333',
+    marginBottom: 4,
+  },
+  analyticsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  analyticsSubtext: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+
+  // Activity Feed Styles
+  activityFeedContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  activityIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8faff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  activityIcon: {
+    fontSize: 18,
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  activityUser: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 11,
+    color: '#999',
+  },
+  activityIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#667eea',
+    marginTop: 16,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
   },
 })

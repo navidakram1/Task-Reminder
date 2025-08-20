@@ -1,15 +1,15 @@
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import {
-  Animated,
-  Dimensions,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Animated,
+    Dimensions,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native'
 
 const { width, height } = Dimensions.get('window')

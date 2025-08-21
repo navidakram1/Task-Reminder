@@ -26,6 +26,7 @@ export default function CreateEditTaskScreen() {
   const [recurrence, setRecurrence] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none')
   const [randomAssignment, setRandomAssignment] = useState(false)
   const [selectedEmoji, setSelectedEmoji] = useState('')
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium')
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [householdMembers, setHouseholdMembers] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -210,6 +211,7 @@ export default function CreateEditTaskScreen() {
         assignee_id: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
         emoji: selectedEmoji || null,
+        priority: priority,
         household_id: selectedHouseholdId,
         created_by: user?.id,
       }
@@ -555,6 +557,35 @@ export default function CreateEditTaskScreen() {
                 </Text>
               </View>
             )}
+          </View>
+
+          {/* Priority Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Priority Level</Text>
+            <View style={styles.priorityContainer}>
+              {(['low', 'medium', 'high'] as const).map((level) => (
+                <TouchableOpacity
+                  key={level}
+                  style={[
+                    styles.priorityButton,
+                    priority === level && styles.priorityButtonActive,
+                    priority === level && level === 'low' && styles.priorityLow,
+                    priority === level && level === 'medium' && styles.priorityMedium,
+                    priority === level && level === 'high' && styles.priorityHigh,
+                  ]}
+                  onPress={() => setPriority(level)}
+                >
+                  <Text style={[
+                    styles.priorityButtonText,
+                    priority === level && styles.priorityButtonTextActive
+                  ]}>
+                    {level === 'low' && '🟢 Low'}
+                    {level === 'medium' && '🟡 Medium'}
+                    {level === 'high' && '🔴 High'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <View style={styles.inputGroup}>
@@ -957,5 +988,45 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     fontStyle: 'italic',
+  },
+  // Priority Button Styles
+  priorityContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  priorityButton: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
+    alignItems: 'center',
+  },
+  priorityButtonActive: {
+    borderWidth: 2,
+  },
+  priorityLow: {
+    borderColor: '#28a745',
+    backgroundColor: '#f8fff9',
+  },
+  priorityMedium: {
+    borderColor: '#ffc107',
+    backgroundColor: '#fffef8',
+  },
+  priorityHigh: {
+    borderColor: '#dc3545',
+    backgroundColor: '#fff8f8',
+  },
+  priorityButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6c757d',
+  },
+  priorityButtonTextActive: {
+    color: '#333',
+    fontWeight: '700',
   },
 })

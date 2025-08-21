@@ -1,8 +1,9 @@
 import { router } from 'expo-router'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     Alert,
     Clipboard,
+    Platform,
     ScrollView,
     Share,
     StyleSheet,
@@ -253,10 +254,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
   },
   header: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 30,
   },
   title: {

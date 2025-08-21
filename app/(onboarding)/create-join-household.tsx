@@ -368,6 +368,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
+    paddingBottom: 60,
   },
   header: {
     alignItems: 'center',

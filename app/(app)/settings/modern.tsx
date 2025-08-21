@@ -1,6 +1,7 @@
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
 import { useEffect, useState } from 'react'
 import {
     Alert,
@@ -9,7 +10,6 @@ import {
     Image,
     Platform,
     ScrollView,
-    StatusBar,
     StyleSheet,
     Switch,
     Text,
@@ -309,7 +309,7 @@ export default function ModernSettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar style="light" backgroundColor="transparent" translucent />
       
       {/* Animated Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>

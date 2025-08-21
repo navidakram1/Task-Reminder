@@ -1,13 +1,13 @@
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import React, { useEffect, useRef, useState } from 'react'
+import { StatusBar } from 'expo-status-bar'
+import { useEffect, useRef, useState } from 'react'
 import {
     Animated,
     Dimensions,
     Platform,
     ScrollView,
-    StatusBar,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -127,7 +127,7 @@ export default function LandingScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar style="light" backgroundColor="transparent" translucent />
 
       {/* Animated Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>

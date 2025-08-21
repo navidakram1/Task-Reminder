@@ -7,7 +7,6 @@ import {
     Image,
     Platform,
     ScrollView,
-    StatusBar,
     StyleSheet,
     Switch,
     Text,
@@ -679,7 +678,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: 'white',
-    paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight || 0) + 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
     paddingBottom: 25,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 25,

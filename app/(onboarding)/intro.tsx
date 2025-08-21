@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import React, { useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import {
     Animated,
     Dimensions,
@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 80 : 60,
-    paddingBottom: 40,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
+    paddingBottom: 60,
   },
   logoSection: {
     alignItems: 'center',

@@ -1,9 +1,10 @@
 import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
     Alert,
     Image,
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
@@ -265,6 +266,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 120 : 100,
   },
   header: {
     alignItems: 'center',

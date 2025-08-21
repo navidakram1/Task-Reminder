@@ -1,4 +1,5 @@
 import { router } from 'expo-router'
+import { StatusBar } from 'expo-status-bar'
 import { useEffect, useRef, useState } from 'react'
 import {
     Alert,
@@ -201,7 +202,7 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar style="light" backgroundColor="transparent" translucent />
 
       {/* Background Gradient */}
       <LinearGradient

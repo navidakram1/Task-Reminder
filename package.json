@@ -14,7 +14,9 @@
     "test:coverage": "jest --coverage",
     "test:dashboard": "jest dashboard",
     "test:analytics": "jest dashboard-analytics",
-    "test:activity": "jest dashboard-activity-feed"
+    "test:activity": "jest dashboard-activity-feed",
+    "test:tasks": "jest task-create-edit",
+    "test:ui": "jest --testPathPattern=__tests__"
   },
   "dependencies": {
     "@babel/runtime": "^7.28.2",

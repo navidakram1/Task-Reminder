@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from 'react'
 import {
     Animated,
     Dimensions,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,

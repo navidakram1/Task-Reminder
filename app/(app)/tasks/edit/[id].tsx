@@ -1,6 +1,5 @@
-import { Picker } from '@react-native-picker/picker'
 import { router, useLocalSearchParams } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
     Alert,
     KeyboardAvoidingView,
@@ -12,6 +11,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import MemberSelector from '../../../../components/MemberSelector'
+import ModernSelector from '../../../../components/ModernSelector'
 import { useAuth } from '../../../../contexts/AuthContext'
 import { supabase } from '../../../../lib/supabase'
 
@@ -311,39 +312,31 @@ export default function EditTaskScreen() {
         {/* Assignee Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Assign To</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={assigneeId}
-              onValueChange={setAssigneeId}
-              style={styles.picker}
-            >
-              <Picker.Item label="Unassigned" value="" />
-              {householdMembers.map((member) => (
-                <Picker.Item
-                  key={member.user_id}
-                  label={member.profiles?.name || member.profiles?.email || 'Unknown'}
-                  value={member.user_id}
-                />
-              ))}
-            </Picker>
-          </View>
+          <MemberSelector
+            members={householdMembers}
+            selectedMemberId={assigneeId}
+            onMemberChange={setAssigneeId}
+            placeholder="Select a person"
+            title="Assign To"
+            allowUnassigned={true}
+          />
         </View>
 
         {/* Recurrence */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Repeat</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={recurrence}
-              onValueChange={setRecurrence}
-              style={styles.picker}
-            >
-              <Picker.Item label="No Repeat" value="none" />
-              <Picker.Item label="Daily" value="daily" />
-              <Picker.Item label="Weekly" value="weekly" />
-              <Picker.Item label="Monthly" value="monthly" />
-            </Picker>
-          </View>
+          <ModernSelector
+            options={[
+              { label: 'No Repeat', value: 'none', icon: '🚫', subtitle: 'One-time task' },
+              { label: 'Daily', value: 'daily', icon: '📅', subtitle: 'Repeats every day' },
+              { label: 'Weekly', value: 'weekly', icon: '📆', subtitle: 'Repeats every week' },
+              { label: 'Monthly', value: 'monthly', icon: '🗓️', subtitle: 'Repeats every month' }
+            ]}
+            selectedValue={recurrence}
+            onValueChange={setRecurrence}
+            placeholder="Select repeat frequency"
+            title="Repeat Frequency"
+          />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

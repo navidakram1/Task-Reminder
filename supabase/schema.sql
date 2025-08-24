@@ -41,12 +41,14 @@ CREATE TABLE tasks (
   title TEXT NOT NULL,
   description TEXT,
   due_date DATE,
+  priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium',
   recurrence TEXT CHECK (recurrence IN ('daily', 'weekly', 'monthly')),
   assignee_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   status TEXT CHECK (status IN ('pending', 'completed', 'awaiting_approval')) DEFAULT 'pending',
   created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  emoji TEXT
 );
 
 -- Create task_approvals table
@@ -213,3 +215,237 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Social Features Tables
+CREATE TABLE user_referrals (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    referral_code VARCHAR(20) UNIQUE NOT NULL,
+    total_referrals INTEGER DEFAULT 0,
+    successful_referrals INTEGER DEFAULT 0,
+    pending_rewards DECIMAL(10,2) DEFAULT 0,
+    total_rewards_earned DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE referral_history (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    referrer_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    referred_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    referral_code VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'cancelled')),
+    reward_amount DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE achievements (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    icon VARCHAR(10) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    requirement INTEGER NOT NULL,
+    rarity VARCHAR(20) DEFAULT 'common' CHECK (rarity IN ('common', 'rare', 'epic', 'legendary')),
+    reward_type VARCHAR(50) NOT NULL,
+    reward_value INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE user_achievements (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    achievement_id UUID REFERENCES achievements(id) ON DELETE CASCADE,
+    current_progress INTEGER DEFAULT 0,
+    unlocked BOOLEAN DEFAULT FALSE,
+    unlocked_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, achievement_id)
+);
+
+CREATE TABLE milestones (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    icon VARCHAR(10) NOT NULL,
+    shareable BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE user_milestones (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    milestone_id UUID REFERENCES milestones(id) ON DELETE CASCADE,
+    achieved_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, milestone_id)
+);
+
+-- Customer Support Tables
+CREATE TABLE bug_reports (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_email VARCHAR(255),
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    steps_to_reproduce TEXT,
+    expected_behavior TEXT,
+    actual_behavior TEXT,
+    device_info TEXT,
+    severity VARCHAR(20) DEFAULT 'medium' CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    category VARCHAR(50) DEFAULT 'general',
+    screenshots TEXT[], -- Array of file paths
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    resolution TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE feature_requests (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_email VARCHAR(255),
+    title VARCHAR(200) NOT NULL,
+    description TEXT NOT NULL,
+    use_case TEXT,
+    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+    category VARCHAR(50) DEFAULT 'general',
+    votes INTEGER DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'submitted' CHECK (status IN ('submitted', 'under_review', 'planned', 'in_development', 'completed', 'rejected')),
+    estimated_effort VARCHAR(20),
+    target_release VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE support_tickets (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    user_email VARCHAR(255),
+    subject VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    category VARCHAR(50) DEFAULT 'general',
+    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+    status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'waiting_for_customer', 'resolved', 'closed')),
+    assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE support_messages (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    sender_type VARCHAR(20) DEFAULT 'customer' CHECK (sender_type IN ('customer', 'support')),
+    message TEXT NOT NULL,
+    attachments TEXT[], -- Array of file paths
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Business Analytics Tables
+CREATE TABLE analytics_events (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    event_type VARCHAR(100) NOT NULL,
+    event_data JSONB,
+    session_id VARCHAR(100),
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE user_analytics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    subscription_type VARCHAR(20) DEFAULT 'free',
+    acquisition_channel VARCHAR(50),
+    first_login TIMESTAMP WITH TIME ZONE,
+    last_active TIMESTAMP WITH TIME ZONE,
+    total_sessions INTEGER DEFAULT 0,
+    total_session_duration INTEGER DEFAULT 0, -- in seconds
+    tasks_created INTEGER DEFAULT 0,
+    bills_created INTEGER DEFAULT 0,
+    households_joined INTEGER DEFAULT 0,
+    referrals_made INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+CREATE TABLE subscription_analytics (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    subscription_type VARCHAR(20) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_method VARCHAR(50),
+    transaction_id VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'completed',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE retention_cohorts (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    cohort_month DATE NOT NULL,
+    users_count INTEGER NOT NULL,
+    week_1_retention DECIMAL(5,2),
+    week_2_retention DECIMAL(5,2),
+    week_4_retention DECIMAL(5,2),
+    week_8_retention DECIMAL(5,2),
+    week_12_retention DECIMAL(5,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(cohort_month)
+);
+
+-- Enable RLS on new tables
+ALTER TABLE user_referrals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE referral_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bug_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feature_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE subscription_analytics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE retention_cohorts ENABLE ROW LEVEL SECURITY;
+
+-- Storage Buckets Setup
+INSERT INTO storage.buckets (id, name, public) VALUES
+  ('receipts', 'receipts', true),
+  ('task-proofs', 'task-proofs', true),
+  ('bug-reports', 'bug-reports', false),
+  ('profile-photos', 'profile-photos', true);
+
+-- Add missing columns to existing tables (for database updates)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority TEXT CHECK (priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium';
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS emoji TEXT;
+
+-- Storage Policies
+CREATE POLICY "Users can upload receipts" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'receipts' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can view receipts" ON storage.objects FOR SELECT
+  USING (bucket_id = 'receipts');
+
+CREATE POLICY "Users can upload task proofs" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'task-proofs' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can view task proofs" ON storage.objects FOR SELECT
+  USING (bucket_id = 'task-proofs');
+
+CREATE POLICY "Users can upload bug report screenshots" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'bug-reports' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can view own bug report screenshots" ON storage.objects FOR SELECT
+  USING (bucket_id = 'bug-reports' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can upload profile photos" ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'profile-photos' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+CREATE POLICY "Users can view profile photos" ON storage.objects FOR SELECT
+  USING (bucket_id = 'profile-photos');

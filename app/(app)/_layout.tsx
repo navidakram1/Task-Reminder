@@ -1,20 +1,28 @@
 import { Tabs } from 'expo-router';
 import { Platform, Text, View } from 'react-native';
 
-// Custom Tab Icon Component
+// Custom Tab Icon Component with modern design
 const TabIcon = ({ emoji, color, focused }: { emoji: string; color: string; focused: boolean }) => (
   <View style={{
     alignItems: 'center',
     justifyContent: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: focused ? `${color}15` : 'transparent',
+    width: focused ? 50 : 40,
+    height: focused ? 50 : 40,
+    borderRadius: focused ? 25 : 20,
+    backgroundColor: focused ? color : 'transparent',
+    shadowColor: focused ? color : 'transparent',
+    shadowOffset: {
+      width: 0,
+      height: focused ? 4 : 0,
+    },
+    shadowOpacity: focused ? 0.3 : 0,
+    shadowRadius: focused ? 8 : 0,
+    elevation: focused ? 8 : 0,
+    transform: [{ scale: focused ? 1.1 : 1 }],
   }}>
     <Text style={{
-      fontSize: focused ? 22 : 20,
-      color: focused ? color : '#8e8e93',
-      transform: [{ scale: focused ? 1.1 : 1 }],
+      fontSize: focused ? 24 : 20,
+      color: focused ? '#ffffff' : '#8e8e93',
     }}>
       {emoji}
     </Text>
@@ -29,34 +37,60 @@ export default function AppLayout() {
         tabBarActiveTintColor: '#667eea',
         tabBarInactiveTintColor: '#8e8e93',
         tabBarStyle: {
-          backgroundColor: '#ffffff',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
           borderTopWidth: 0,
-          elevation: 20,
-          shadowColor: '#000',
+          elevation: 30,
+          shadowColor: '#667eea',
           shadowOffset: {
             width: 0,
-            height: -4,
+            height: -8,
           },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 25 : 8,
-          height: Platform.OS === 'ios' ? 85 : 65,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
+          shadowOpacity: 0.15,
+          shadowRadius: 20,
+          paddingTop: 12,
+          paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+          paddingHorizontal: 20,
+          height: Platform.OS === 'ios' ? 95 : 75,
+          borderTopLeftRadius: 25,
+          borderTopRightRadius: 25,
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
+          backdropFilter: 'blur(20px)',
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 2,
+          fontSize: 10,
+          fontWeight: '700',
+          marginTop: 4,
+          letterSpacing: 0.5,
         },
         tabBarItemStyle: {
-          paddingVertical: 4,
+          paddingVertical: 6,
+          paddingHorizontal: 4,
+          borderRadius: 20,
+          marginHorizontal: 2,
         },
+        tabBarBackground: () => (
+          <View style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            borderTopLeftRadius: 25,
+            borderTopRightRadius: 25,
+            shadowColor: '#667eea',
+            shadowOffset: {
+              width: 0,
+              height: -8,
+            },
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            elevation: 30,
+          }} />
+        ),
       }}
     >
       <Tabs.Screen
@@ -73,7 +107,7 @@ export default function AppLayout() {
         options={{
           title: 'Tasks',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="📋" color={color} focused={focused} />
+            <TabIcon emoji="✅" color={color} focused={focused} />
           ),
         }}
       />
@@ -87,30 +121,28 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="proposals"
-        options={{
-          title: 'Proposals',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🗳️" color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="approvals"
         options={{
           title: 'Approvals',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="✅" color={color} focused={focused} />
+            <TabIcon emoji="👍" color={color} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Settings',
+          title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="⚙️" color={color} focused={focused} />
+            <TabIcon emoji="👤" color={color} focused={focused} />
           ),
+        }}
+      />
+      {/* Hidden Routes - Accessible via navigation but not in tab bar */}
+      <Tabs.Screen
+        name="proposals"
+        options={{
+          href: null, // Hide from tab bar
         }}
       />
       <Tabs.Screen
@@ -121,6 +153,24 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="household"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="social"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="support"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
         options={{
           href: null, // Hide from tab bar
         }}

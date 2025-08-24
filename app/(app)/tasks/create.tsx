@@ -1,4 +1,3 @@
-import { Picker } from '@react-native-picker/picker'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
@@ -12,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import ModernSelector from '../../../components/ModernSelector'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
@@ -336,26 +336,24 @@ export default function CreateEditTaskScreen() {
           {households.length > 1 && (
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Household/Group</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={selectedHouseholdId}
-                  onValueChange={(value) => {
-                    setSelectedHouseholdId(value)
-                    const selectedHousehold = households.find(h => h.id === value)
-                    setHousehold(selectedHousehold)
-                    setAssigneeId('') // Reset assignee when household changes
-                  }}
-                  style={styles.picker}
-                >
-                  {households.map((household) => (
-                    <Picker.Item
-                      key={household.id}
-                      label={`${household.name} ${household.type === 'group' ? '(Group)' : '(Household)'}`}
-                      value={household.id}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <ModernSelector
+                options={households.map(household => ({
+                  label: household.name,
+                  value: household.id,
+                  subtitle: household.type === 'group' ? 'Group' : 'Household',
+                  icon: household.type === 'group' ? '👥' : '🏠'
+                }))}
+                selectedValue={selectedHouseholdId}
+                onValueChange={(value) => {
+                  setSelectedHouseholdId(value)
+                  const selectedHousehold = households.find(h => h.id === value)
+                  setHousehold(selectedHousehold)
+                  setAssigneeId('') // Reset assignee when household changes
+                }}
+                placeholder="Select household or group"
+                title="Choose Household"
+                searchable={households.length > 5}
+              />
               <Text style={styles.helperText}>
                 {households.find(h => h.id === selectedHouseholdId)?.name} is currently selected
               </Text>
@@ -518,25 +516,16 @@ export default function CreateEditTaskScreen() {
             </View>
 
             {!randomAssignment && (
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={assigneeId}
-                  onValueChange={setAssigneeId}
-                  style={styles.picker}
-                  enabled={householdMembers.length > 0}
-                >
-                  <Picker.Item
-                    label={householdMembers.length === 0 ? "Loading members..." : "Select a person (optional)"}
-                    value=""
-                  />
-                  {householdMembers.map((member) => (
-                    <Picker.Item
-                      key={member.user_id}
-                      label={`${member.profiles?.name || member.profiles?.email || 'Unknown'} ${member.role === 'admin' ? '(Admin)' : ''}`}
-                      value={member.user_id}
-                    />
-                  ))}
-                </Picker>
+              <View>
+                <MemberSelector
+                  members={householdMembers}
+                  selectedMemberId={assigneeId}
+                  onMemberChange={setAssigneeId}
+                  placeholder={householdMembers.length === 0 ? "Loading members..." : "Select a person (optional)"}
+                  title="Assign To"
+                  allowUnassigned={true}
+                  disabled={householdMembers.length === 0}
+                />
                 {householdMembers.length === 0 && selectedHouseholdId && (
                   <Text style={styles.helperText}>
                     Loading household members...

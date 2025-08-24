@@ -735,6 +735,94 @@ export default function DashboardScreen() {
         </ScrollView>
       </View>
 
+      {/* Work Showcase Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>🏆 Work Showcase</Text>
+          <TouchableOpacity onPress={() => router.push('/(app)/tasks')}>
+            <Text style={styles.seeAllText}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.workShowcaseContainer}>
+          {/* Upcoming Work */}
+          <View style={styles.workShowcaseCard}>
+            <View style={styles.workShowcaseHeader}>
+              <View style={styles.workShowcaseIconContainer}>
+                <Text style={styles.workShowcaseIcon}>⏰</Text>
+              </View>
+              <View style={styles.workShowcaseInfo}>
+                <Text style={styles.workShowcaseTitle}>Upcoming Work</Text>
+                <Text style={styles.workShowcaseSubtitle}>Tasks due soon</Text>
+              </View>
+              <View style={styles.workShowcaseBadge}>
+                <Text style={styles.workShowcaseBadgeText}>{data.upcomingTasks.length}</Text>
+              </View>
+            </View>
+
+            {data.upcomingTasks.length > 0 ? (
+              <View style={styles.workShowcasePreview}>
+                {data.upcomingTasks.slice(0, 3).map((task, index) => (
+                  <View key={task.id} style={styles.workPreviewItem}>
+                    <View style={styles.workPreviewDot} />
+                    <Text style={styles.workPreviewText} numberOfLines={1}>
+                      {task.title}
+                    </Text>
+                    {task.due_date && (
+                      <Text style={styles.workPreviewDate}>
+                        {formatDate(task.due_date)}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+                {data.upcomingTasks.length > 3 && (
+                  <Text style={styles.workPreviewMore}>
+                    +{data.upcomingTasks.length - 3} more tasks
+                  </Text>
+                )}
+              </View>
+            ) : (
+              <View style={styles.workShowcaseEmpty}>
+                <Text style={styles.workShowcaseEmptyText}>All caught up! 🎉</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Completed Work */}
+          <View style={styles.workShowcaseCard}>
+            <View style={styles.workShowcaseHeader}>
+              <View style={[styles.workShowcaseIconContainer, styles.workShowcaseIconCompleted]}>
+                <Text style={styles.workShowcaseIcon}>✅</Text>
+              </View>
+              <View style={styles.workShowcaseInfo}>
+                <Text style={styles.workShowcaseTitle}>Recent Achievements</Text>
+                <Text style={styles.workShowcaseSubtitle}>Completed this week</Text>
+              </View>
+              <View style={[styles.workShowcaseBadge, styles.workShowcaseBadgeCompleted]}>
+                <Text style={styles.workShowcaseBadgeText}>{data.analytics.tasksCompleted}</Text>
+              </View>
+            </View>
+
+            <View style={styles.workShowcaseStats}>
+              <View style={styles.workStatItem}>
+                <Text style={styles.workStatNumber}>{data.analytics.tasksCompleted}</Text>
+                <Text style={styles.workStatLabel}>Tasks</Text>
+              </View>
+              <View style={styles.workStatDivider} />
+              <View style={styles.workStatItem}>
+                <Text style={styles.workStatNumber}>{data.analytics.householdEfficiency}%</Text>
+                <Text style={styles.workStatLabel}>Efficiency</Text>
+              </View>
+              <View style={styles.workStatDivider} />
+              <View style={styles.workStatItem}>
+                <Text style={styles.workStatNumber}>{data.analytics.avgTasksPerWeek}</Text>
+                <Text style={styles.workStatLabel}>Per Week</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+
       {/* Analytics Widgets */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📊 Household Analytics</Text>
@@ -1130,6 +1218,17 @@ export default function DashboardScreen() {
           </ScrollView>
         </View>
       </Modal>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.floatingActionButton}
+        onPress={() => router.push('/(app)/tasks/create')}
+        activeOpacity={0.8}
+      >
+        <View style={styles.fabGradient}>
+          <Text style={styles.fabIcon}>+</Text>
+        </View>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -2337,5 +2436,180 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 4,
+  },
+  floatingActionButton: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 85,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  fabGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#667eea',
+  },
+  fabIcon: {
+    fontSize: 28,
+    color: '#ffffff',
+    fontWeight: 'bold',
+    lineHeight: 28,
+  },
+  // Work Showcase Styles
+  workShowcaseContainer: {
+    gap: 16,
+  },
+  workShowcaseCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+  },
+  workShowcaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  workShowcaseIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  workShowcaseIconCompleted: {
+    backgroundColor: '#28a745',
+  },
+  workShowcaseIcon: {
+    fontSize: 20,
+    color: '#ffffff',
+  },
+  workShowcaseInfo: {
+    flex: 1,
+  },
+  workShowcaseTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  workShowcaseSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  workShowcaseBadge: {
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 32,
+    alignItems: 'center',
+  },
+  workShowcaseBadgeCompleted: {
+    backgroundColor: '#28a745',
+  },
+  workShowcaseBadgeText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  workShowcasePreview: {
+    gap: 8,
+  },
+  workPreviewItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+  workPreviewDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#667eea',
+    marginRight: 12,
+  },
+  workPreviewText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  workPreviewDate: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+  },
+  workPreviewMore: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  workShowcaseEmpty: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  workShowcaseEmptyText: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  workShowcaseStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  workStatItem: {
+    alignItems: 'center',
+  },
+  workStatNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  workStatLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  workStatDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#e0e0e0',
   },
 })

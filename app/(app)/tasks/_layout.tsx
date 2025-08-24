@@ -4,12 +4,12 @@ export default function TasksLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
-      <Stack.Screen name="[id]" />
       <Stack.Screen name="create" />
       <Stack.Screen name="edit" />
       <Stack.Screen name="random-assignment" />
       <Stack.Screen name="smart-assignment" />
       <Stack.Screen name="recurring" />
+      <Stack.Screen name="[id]" />
     </Stack>
   )
 }

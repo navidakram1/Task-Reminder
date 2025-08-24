@@ -95,6 +95,8 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              textContentType="emailAddress"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -107,6 +109,8 @@ export default function LoginScreen() {
               placeholder="Enter your password"
               secureTextEntry
               autoComplete="current-password"
+              textContentType="password"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -211,7 +215,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#ffffff',
+    color: '#333333',
+    // Fix iOS autofill yellow background
+    ...(Platform.OS === 'ios' && {
+      backgroundColor: '#ffffff',
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    }),
   },
   forgotPassword: {
     alignSelf: 'flex-end',

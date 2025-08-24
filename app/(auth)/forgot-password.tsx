@@ -1,16 +1,16 @@
-import React, { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native'
 import { router } from 'expo-router'
+import { useState } from 'react'
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native'
 import { useAuth } from '../../contexts/AuthContext'
 
 export default function ForgotPasswordScreen() {
@@ -96,6 +96,8 @@ export default function ForgotPasswordScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
+              textContentType="emailAddress"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -166,7 +168,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#ffffff',
+    color: '#333333',
+    // Fix iOS autofill yellow background
+    ...(Platform.OS === 'ios' && {
+      backgroundColor: '#ffffff',
+      shadowColor: 'transparent',
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0,
+      shadowRadius: 0,
+    }),
   },
   resetButton: {
     backgroundColor: '#667eea',

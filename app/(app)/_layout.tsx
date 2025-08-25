@@ -28,12 +28,6 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="proposals"
-        options={{
-          title: 'Vote',
-        }}
-      />
-      <Tabs.Screen
         name="approvals"
         options={{
           title: 'Review',
@@ -46,6 +40,12 @@ export default function AppLayout() {
         }}
       />
       {/* Hidden Routes - Accessible via navigation but not in tab bar */}
+      <Tabs.Screen
+        name="proposals"
+        options={{
+          href: null, // Hide from tab bar
+        }}
+      />
       <Tabs.Screen
         name="subscription"
         options={{

@@ -34,18 +34,18 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="proposals"
+        options={{
+          title: 'Proposals',
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
         }}
       />
       {/* Hidden Routes - Accessible via navigation but not in tab bar */}
-      <Tabs.Screen
-        name="proposals"
-        options={{
-          href: null, // Hide from tab bar
-        }}
-      />
       <Tabs.Screen
         name="subscription"
         options={{

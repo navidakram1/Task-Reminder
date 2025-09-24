@@ -34,6 +34,7 @@ const tabs: TabItem[] = [
   { name: 'tasks', title: 'Tasks', emoji: '✅', route: '/(app)/tasks' },
   { name: 'bills', title: 'Bills', emoji: '💰', route: '/(app)/bills' },
   { name: 'review', title: 'Review', emoji: '⭐', route: '/(app)/approvals' },
+  { name: 'proposals', title: 'Proposals', emoji: '📋', route: '/(app)/proposals' },
   { name: 'settings', title: 'Settings', emoji: '⚙️', route: '/(app)/settings' },
 ]
 
@@ -49,6 +50,12 @@ const quickActions: QuickAction[] = [
     emoji: '💰',
     route: '/(app)/bills/create',
     description: 'Split a new bill'
+  },
+  {
+    title: 'New Proposal',
+    emoji: '📋',
+    route: '/(app)/proposals/create',
+    description: 'Create a proposal'
   },
   {
     title: 'Add Review',
@@ -219,7 +226,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
           <View style={styles.tabBarContent}>
             {/* Left tabs */}
             <View style={styles.tabSection}>
-              {tabs.slice(0, 2).map((tab, index) => renderTabButton(tab, index))}
+              {tabs.slice(0, 3).map((tab, index) => renderTabButton(tab, index))}
             </View>
 
             {/* Plus button */}
@@ -227,7 +234,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
             {/* Right tabs */}
             <View style={styles.tabSection}>
-              {tabs.slice(2).map((tab, index) => renderTabButton(tab, index + 2))}
+              {tabs.slice(3).map((tab, index) => renderTabButton(tab, index + 3))}
             </View>
           </View>
         </BlurView>

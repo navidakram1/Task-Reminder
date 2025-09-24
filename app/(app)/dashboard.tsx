@@ -705,123 +705,10 @@ export default function DashboardScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+    </View>
+  )
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>📋 Upcoming Tasks</Text>
-          <TouchableOpacity onPress={() => router.push('/(app)/tasks')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {data.upcomingTasks.length > 0 ? (
-          data.upcomingTasks.map((task) => (
-            <TouchableOpacity
-              key={task.id}
-              style={styles.taskCard}
-              onPress={() => router.push(`/(app)/tasks/${task.id}`)}
-            >
-              <View style={styles.taskInfo}>
-                <View style={styles.taskTitleRow}>
-                  {task.emoji && (
-                    <Text style={styles.taskEmoji}>{task.emoji}</Text>
-                  )}
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                </View>
-                <Text style={styles.taskDescription}>{task.description}</Text>
-              </View>
-              <View style={styles.taskMeta}>
-                {task.due_date && (
-                  <Text style={styles.taskDueDate}>{formatDate(task.due_date)}</Text>
-                )}
-                <Text style={[styles.taskStatus, styles[`status_${task.status}`]]}>
-                  {task.status.replace('_', ' ')}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No upcoming tasks</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/tasks/create')}>
-              <Text style={styles.emptyStateAction}>Create your first task</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {data.pendingTransfers.length > 0 && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🔄 Transfer Requests</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/household/transfer-requests')}>
-              <Text style={styles.seeAllText}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {data.pendingTransfers.slice(0, 3).map((request: any) => (
-            <TouchableOpacity
-              key={request.transfer_id}
-              style={styles.transferCard}
-              onPress={() => router.push('/(app)/household/transfer-requests')}
-            >
-              <View style={styles.transferInfo}>
-                <Text style={styles.transferTitle}>📋 {request.task_title}</Text>
-                <Text style={styles.transferFrom}>From: {request.from_user_name}</Text>
-                <Text style={styles.transferDate}>
-                  📅 {new Date(request.created_at).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={styles.transferActions}>
-                <Text style={styles.transferActionText}>Respond →</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>💰 Recent Bills</Text>
-          <TouchableOpacity onPress={() => router.push('/(app)/bills')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {data.recentBills.length > 0 ? (
-          data.recentBills.map((bill) => (
-            <TouchableOpacity
-              key={bill.id}
-              style={styles.billCard}
-              onPress={() => router.push(`/(app)/bills/${bill.id}`)}
-            >
-              <View style={styles.billInfo}>
-                <Text style={styles.billTitle}>{bill.title}</Text>
-                <Text style={styles.billCategory}>{bill.category}</Text>
-              </View>
-              <View style={styles.billMeta}>
-                <Text style={styles.billAmount}>{formatCurrency(bill.amount)}</Text>
-                <Text style={styles.billDate}>{formatDate(bill.date)}</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No recent bills</Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/bills/create')}>
-              <Text style={styles.emptyStateAction}>Add your first bill</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-      </View>
-      </ScrollView>
-
-      {/* Enhanced Cool Household Switcher Modal */}
+      {/* Household Switcher Modal */}
       <Modal
         visible={showHouseholdModal}
         animationType="slide"
@@ -829,106 +716,53 @@ export default function DashboardScreen() {
         onRequestClose={() => setShowHouseholdModal(false)}
       >
         <View style={styles.modalContainer}>
-          {/* Cool Header with Gradient */}
-          <View style={styles.modalHeaderGradient}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                style={styles.modalCloseButtonContainer}
-                onPress={() => setShowHouseholdModal(false)}
-              >
-                <View style={styles.modalCloseButton}>
-                  <Text style={styles.modalCloseButtonText}>✕</Text>
-                </View>
-              </TouchableOpacity>
-
-              <View style={styles.modalTitleContainer}>
-                <Text style={styles.modalTitle}>🏠 Switch Household</Text>
-                <Text style={styles.modalSubtitle}>Choose your active space</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.modalAddButtonContainer}
-                onPress={() => {
-                  setShowHouseholdModal(false)
-                  router.push('/(onboarding)/create-join-household')
-                }}
-              >
-                <View style={styles.modalAddButton}>
-                  <Text style={styles.modalAddButtonText}>+</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Switch Household</Text>
+            <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
+              <Text style={styles.modalClose}>✕</Text>
+            </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
-            {households.map((household, index) => (
+          <ScrollView style={styles.modalContent}>
+            {households.map((household) => (
               <TouchableOpacity
                 key={household.id}
                 style={[
-                  styles.coolHouseholdCard,
-                  household.is_active && styles.coolHouseholdCardActive,
-                  {
-                    transform: [{ scale: household.is_active ? 1.02 : 1 }],
-                    marginBottom: index === households.length - 1 ? 20 : 16
-                  }
+                  styles.modalHouseholdItem,
+                  household.is_active && styles.modalHouseholdItemActive
                 ]}
                 onPress={() => switchHousehold(household)}
-                disabled={switchingHousehold}
-                activeOpacity={0.8}
               >
-                <View style={styles.householdCardGlow} />
-
-                <View style={styles.householdCardContent}>
-                  <View style={styles.householdCardLeft}>
-                    <View style={[
-                      styles.householdIconContainer,
-                      household.is_active && styles.householdIconContainerActive
-                    ]}>
-                      <Text style={styles.householdCardIcon}>
-                        {household.type === 'group' ? '👥' : '🏠'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.householdCardInfo}>
-                      <Text style={[
-                        styles.householdCardName,
-                        household.is_active && styles.householdCardNameActive
-                      ]}>
-                        {household.name}
-                      </Text>
-                      <Text style={styles.householdCardMeta}>
-                        {household.member_count} member{household.member_count !== 1 ? 's' : ''} • {household.role}
-                      </Text>
-                      <Text style={styles.householdCardType}>
-                        {household.type === 'group' ? 'Group' : 'Household'}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.householdCardRight}>
-                    {household.is_active ? (
-                      <View style={styles.activeIndicatorContainer}>
-                        <Text style={styles.activeIndicatorText}>✓</Text>
-                        <Text style={styles.activeLabel}>Active</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.switchIndicator}>
-                        <Text style={styles.switchText}>Tap to switch</Text>
-                        <Text style={styles.switchArrow}>→</Text>
-                      </View>
-                    )}
-                  </View>
+                <Text style={styles.modalHouseholdIcon}>
+                  {household.type === 'group' ? '👥' : '🏠'}
+                </Text>
+                <View style={styles.modalHouseholdInfo}>
+                  <Text style={styles.modalHouseholdName}>{household.name}</Text>
+                  <Text style={styles.modalHouseholdMeta}>
+                    {household.member_count} members
+                  </Text>
                 </View>
-
                 {household.is_active && (
-                  <View style={styles.activeGlow} />
+                  <Text style={styles.modalActiveIndicator}>✓</Text>
                 )}
               </TouchableOpacity>
             ))}
 
-            {households.length === 0 && (
-              <View style={styles.emptyHouseholds}>
-                <Text style={styles.emptyHouseholdsText}>No households found</Text>
+            <TouchableOpacity
+              style={styles.modalAddHousehold}
+              onPress={() => {
+                setShowHouseholdModal(false)
+                router.push('/(onboarding)/create-join-household')
+              }}
+            >
+              <Text style={styles.modalAddIcon}>+</Text>
+              <Text style={styles.modalAddText}>Create or Join Household</Text>
+            </TouchableOpacity>
+          </ScrollView>
+      </Modal>
+    </View>
+  )
+}
                 <TouchableOpacity
                   style={styles.createFirstHouseholdButton}
                   onPress={() => {
@@ -2402,5 +2236,92 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#fff',
     fontWeight: '300',
+  },
+
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  modalClose: {
+    fontSize: 18,
+    color: '#666',
+    padding: 4,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  modalHouseholdItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#f8f9fa',
+  },
+  modalHouseholdItemActive: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  modalHouseholdIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  modalHouseholdInfo: {
+    flex: 1,
+  },
+  modalHouseholdName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  modalHouseholdMeta: {
+    fontSize: 14,
+    color: '#666',
+  },
+  modalActiveIndicator: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  modalAddHousehold: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
+    borderStyle: 'dashed',
+  },
+  modalAddIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    color: '#666',
+  },
+  modalAddText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#666',
   },
 })

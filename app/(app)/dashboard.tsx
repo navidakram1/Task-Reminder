@@ -39,6 +39,23 @@ interface Household {
   type: string
 }
 
+// Helper functions
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffTime = Math.abs(now.getTime() - date.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays === 0) return 'Today'
+  if (diffDays === 1) return 'Tomorrow'
+  if (diffDays < 7) return `in ${diffDays} days`
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
 export default function DashboardScreen() {
   const [data, setData] = useState<DashboardData>({
     upcomingTasks: [],
@@ -479,507 +496,215 @@ export default function DashboardScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
+        {/* Clean Header */}
         <View style={styles.header}>
-        {/* Enhanced Personal Welcome Message */}
-        <View style={styles.personalWelcomeSection}>
-          <View style={styles.welcomeGradient}>
-            <View style={styles.welcomeContent}>
+          <View style={styles.headerTop}>
+            <View>
               <Text style={styles.greetingText}>
-                {getGreeting()}, {getUserDisplayName()}! 👋
+                {getGreeting()}, {getUserDisplayName()}
               </Text>
-              <Text style={styles.welcomeSubtext}>
-                Ready to tackle your day? You have {data.upcomingTasks.length} tasks waiting
+              <Text style={styles.dateText}>
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric'
+                })}
               </Text>
-              <Text style={styles.dateText}>{new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric'
-              })}</Text>
             </View>
-            <View style={styles.welcomeIcon}>
-              <Text style={styles.welcomeEmoji}>✨</Text>
+            <TouchableOpacity
+              style={styles.profileButton}
+              onPress={() => router.push('/(app)/settings')}
+            >
+              <Text style={styles.profileIcon}>👤</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Status Summary */}
+          <View style={styles.statusCard}>
+            <View style={styles.statusContent}>
+              <Text style={styles.statusTitle}>
+                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                  ? 'All caught up!'
+                  : `${data.upcomingTasks.length + data.pendingTransfers.length} items need attention`
+                }
+              </Text>
+              <Text style={styles.statusSubtitle}>
+                {data.upcomingTasks.length} tasks • {data.recentBills.length} recent bills
+              </Text>
             </View>
+            {(data.upcomingTasks.length + data.pendingTransfers.length) === 0 && (
+              <Text style={styles.statusEmoji}>🎉</Text>
+            )}
           </View>
         </View>
 
-        <View style={styles.welcomeSection}>
-          <View style={styles.welcomeContent}>
+        {/* Household Selector */}
+        <View style={styles.section}>
           <TouchableOpacity
-            style={[
-              styles.notificationBar,
-              (data.upcomingTasks.length + data.pendingTransfers.length) === 0
-                ? styles.notificationBarSuccess
-                : styles.notificationBarAlert
-            ]}
-            onPress={() => router.push('/(app)/household/activity')}
-            activeOpacity={0.8}
+            style={styles.householdSelector}
+            onPress={() => setShowHouseholdModal(true)}
           >
-            <View style={[
-              styles.notificationIcon,
-              (data.upcomingTasks.length + data.pendingTransfers.length) === 0
-                ? styles.notificationIconSuccess
-                : styles.notificationIconAlert
-            ]}>
-              <Text style={styles.notificationBadge}>
-                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
-                  ? '✓'
-                  : data.upcomingTasks.length + data.pendingTransfers.length
-                }
-              </Text>
-            </View>
-            <View style={styles.notificationContent}>
-              <Text style={styles.notificationText}>
-                {data.upcomingTasks.length > 0
-                  ? `${data.upcomingTasks.length} tasks due soon`
-                  : data.pendingTransfers.length > 0
-                    ? `${data.pendingTransfers.length} pending transfers`
-                    : 'All caught up! 🎉'
-                }
-              </Text>
-              <Text style={styles.notificationSubtext}>
-                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
-                  ? 'Great work, team!'
-                  : 'Tap to view details'
-                }
-              </Text>
-            </View>
-            <Text style={styles.notificationArrow}>→</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Enhanced Household Card with Dropdown */}
-        <TouchableOpacity
-          style={styles.householdCard}
-          onPress={() => router.push('/(app)/household/activity')}
-          activeOpacity={0.9}
-        >
-          <View style={styles.householdCardGradient}>
             <View style={styles.householdInfo}>
-              <View style={styles.householdHeader}>
+              <Text style={styles.householdIcon}>🏠</Text>
+              <View style={styles.householdDetails}>
+                <Text style={styles.householdName}>{data.household.name}</Text>
+                <Text style={styles.householdMeta}>Tap to switch households</Text>
+              </View>
+            </View>
+            <Text style={styles.chevronIcon}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => router.push('/(app)/tasks/create')}
+            >
+              <Text style={styles.quickActionIcon}>📝</Text>
+              <Text style={styles.quickActionTitle}>Add Task</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => router.push('/(app)/bills/create')}
+            >
+              <Text style={styles.quickActionIcon}>💰</Text>
+              <Text style={styles.quickActionTitle}>Add Bill</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => router.push('/(app)/tasks/random-assignment')}
+            >
+              <Text style={styles.quickActionIcon}>🎲</Text>
+              <Text style={styles.quickActionTitle}>Auto Assign</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => router.push('/(app)/household/members')}
+            >
+              <Text style={styles.quickActionIcon}>👥</Text>
+              <Text style={styles.quickActionTitle}>Members</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+
+        {/* Recent Activity */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Activity</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/household/activity')}>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {data.activityFeed.length > 0 ? (
+            <View style={styles.activityList}>
+              {data.activityFeed.slice(0, 3).map((activity, index) => (
+                <View key={index} style={styles.activityItem}>
+                  <Text style={styles.activityIcon}>
+                    {activity.type === 'task_completed' ? '✅' :
+                     activity.type === 'bill_added' ? '💰' :
+                     activity.type === 'member_joined' ? '👋' : '📝'}
+                  </Text>
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityText}>{activity.description}</Text>
+                    <Text style={styles.activityTime}>{activity.time_ago}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No recent activity</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Tasks Overview */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tasks</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/tasks')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+
+          {data.upcomingTasks.length > 0 ? (
+            <View style={styles.tasksList}>
+              {data.upcomingTasks.slice(0, 3).map((task, index) => (
                 <TouchableOpacity
-                  style={styles.coolHouseholdSelector}
-                  onPress={(e) => {
-                    e.stopPropagation()
-                    setShowHouseholdModal(true)
-                  }}
-                  activeOpacity={0.8}
+                  key={task.id}
+                  style={styles.taskItem}
+                  onPress={() => router.push(`/(app)/tasks/${task.id}`)}
                 >
-                  <View style={styles.householdSelectorContent}>
-                    <View style={styles.householdSelectorLeft}>
-                      <Text style={styles.householdSelectorIcon}>🏡</Text>
-                      <View style={styles.householdSelectorInfo}>
-                        <Text style={styles.householdSelectorName}>{data.household.name}</Text>
-                        <Text style={styles.householdSelectorHint}>Tap to switch</Text>
-                      </View>
-                    </View>
-                    <View style={styles.dropdownIconContainer}>
-                      <Text style={styles.dropdownIcon}>⌄</Text>
-                    </View>
-                  </View>
-                  <View style={styles.householdSelectorGlow} />
-                </TouchableOpacity>
-                <View style={styles.householdBadge}>
-                  <Text style={styles.badgeText}>Active</Text>
-                </View>
-              </View>
-              <Text style={styles.activityHint}>✨ Tap to view recent activity</Text>
-              <View style={styles.householdStats}>
-                <View style={styles.statItem}>
-                  <View style={styles.statCircle}>
-                    <Text style={styles.statNumber}>{data.upcomingTasks.length}</Text>
-                  </View>
-                  <Text style={styles.statLabel}>Tasks</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <View style={styles.statCircle}>
-                    <Text style={styles.statNumber}>{data.recentBills.length}</Text>
-                  </View>
-                  <Text style={styles.statLabel}>Bills</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <View style={styles.statCircle}>
-                    <Text style={styles.statNumber}>{data.pendingTransfers.length}</Text>
-                  </View>
-                  <Text style={styles.statLabel}>Transfers</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.householdIcon}>
-              <View style={styles.arrowCircle}>
-                <Text style={styles.householdIconText}>→</Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Actions Grid */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.quickActionsGrid}>
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.primaryAction]}
-            onPress={() => router.push('/(app)/tasks/create')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>📋</Text>
-            </View>
-            <Text style={styles.actionTitle}>Create Task</Text>
-            <Text style={styles.actionSubtitle}>Add new chore</Text>
-            <View style={styles.actionGlow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.secondaryAction]}
-            onPress={() => router.push('/(app)/tasks/smart-assignment')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>🎯</Text>
-            </View>
-            <Text style={styles.actionTitle}>SplitDuty AI</Text>
-            <Text style={styles.actionSubtitle}>Fair assignment powered by AI</Text>
-            <View style={styles.actionGlow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.tertiaryAction]}
-            onPress={() => router.push('/(app)/bills/create')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>💰</Text>
-            </View>
-            <Text style={styles.actionTitle}>Add Bill</Text>
-            <Text style={styles.actionSubtitle}>Split expense</Text>
-            <View style={styles.actionGlow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.tertiaryAction]}
-            onPress={() => router.push('/(app)/bills')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>📊</Text>
-            </View>
-            <Text style={styles.actionTitle}>View Bills</Text>
-            <Text style={styles.actionSubtitle}>Manage expenses</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.tertiaryAction]}
-            onPress={() => router.push('/(app)/household/transfer-requests')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>🔄</Text>
-            </View>
-            <Text style={styles.actionTitle}>Transfers</Text>
-            <Text style={styles.actionSubtitle}>
-              {data.pendingTransfers.length > 0 ? `${data.pendingTransfers.length} pending` : 'No requests'}
-            </Text>
-            <View style={styles.actionGlow} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickActionCard, styles.quaternaryAction]}
-            onPress={() => router.push('/(app)/household/members')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconContainer}>
-              <Text style={styles.actionIcon}>👥</Text>
-            </View>
-            <Text style={styles.actionTitle}>Members</Text>
-            <Text style={styles.actionSubtitle}>Manage team</Text>
-            <View style={styles.actionGlow} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Enhanced Feature Slider */}
-      <View style={styles.featureSliderContainer}>
-        <Text style={styles.sectionTitle}>✨ Discover Features</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.featureSlider}
-        >
-          <View style={[styles.featureCard, styles.featureCard1]}>
-            <Text style={styles.featureIcon}>🎯</Text>
-            <Text style={styles.featureTitle}>Smart Task Assignment</Text>
-            <Text style={styles.featureDescription}>Auto-shuffle chores fairly among household members</Text>
-          </View>
-
-          <View style={[styles.featureCard, styles.featureCard2]}>
-            <Text style={styles.featureIcon}>💰</Text>
-            <Text style={styles.featureTitle}>Bill Splitting</Text>
-            <Text style={styles.featureDescription}>Split expenses easily with custom amounts and tracking</Text>
-          </View>
-
-          <View style={[styles.featureCard, styles.featureCard3]}>
-            <Text style={styles.featureIcon}>🔔</Text>
-            <Text style={styles.featureTitle}>Smart Reminders</Text>
-            <Text style={styles.featureDescription}>Never miss a task with push and email notifications</Text>
-          </View>
-
-          <View style={[styles.featureCard, styles.featureCard4]}>
-            <Text style={styles.featureIcon}>✅</Text>
-            <Text style={styles.featureTitle}>Task Approval</Text>
-            <Text style={styles.featureDescription}>Verify completed tasks with photo proof</Text>
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Work Showcase Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🏆 Work Showcase</Text>
-          <TouchableOpacity onPress={() => router.push('/(app)/tasks')}>
-            <Text style={styles.seeAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.workShowcaseContainer}>
-          {/* Upcoming Work */}
-          <View style={styles.workShowcaseCard}>
-            <View style={styles.workShowcaseHeader}>
-              <View style={styles.workShowcaseIconContainer}>
-                <Text style={styles.workShowcaseIcon}>⏰</Text>
-              </View>
-              <View style={styles.workShowcaseInfo}>
-                <Text style={styles.workShowcaseTitle}>Upcoming Work</Text>
-                <Text style={styles.workShowcaseSubtitle}>Tasks due soon</Text>
-              </View>
-              <View style={styles.workShowcaseBadge}>
-                <Text style={styles.workShowcaseBadgeText}>{data.upcomingTasks.length}</Text>
-              </View>
-            </View>
-
-            {data.upcomingTasks.length > 0 ? (
-              <View style={styles.workShowcasePreview}>
-                {data.upcomingTasks.slice(0, 3).map((task, index) => (
-                  <View key={task.id} style={styles.workPreviewItem}>
-                    <View style={styles.workPreviewDot} />
-                    <Text style={styles.workPreviewText} numberOfLines={1}>
-                      {task.title}
-                    </Text>
+                  <View style={styles.taskContent}>
+                    <Text style={styles.taskTitle}>{task.title}</Text>
                     {task.due_date && (
-                      <Text style={styles.workPreviewDate}>
-                        {formatDate(task.due_date)}
+                      <Text style={styles.taskDue}>
+                        Due {formatDate(task.due_date)}
                       </Text>
                     )}
                   </View>
-                ))}
-                {data.upcomingTasks.length > 3 && (
-                  <Text style={styles.workPreviewMore}>
-                    +{data.upcomingTasks.length - 3} more tasks
-                  </Text>
-                )}
-              </View>
-            ) : (
-              <View style={styles.workShowcaseEmpty}>
-                <Text style={styles.workShowcaseEmptyText}>All caught up! 🎉</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Completed Work */}
-          <View style={styles.workShowcaseCard}>
-            <View style={styles.workShowcaseHeader}>
-              <View style={[styles.workShowcaseIconContainer, styles.workShowcaseIconCompleted]}>
-                <Text style={styles.workShowcaseIcon}>✅</Text>
-              </View>
-              <View style={styles.workShowcaseInfo}>
-                <Text style={styles.workShowcaseTitle}>Recent Achievements</Text>
-                <Text style={styles.workShowcaseSubtitle}>Completed this week</Text>
-              </View>
-              <View style={[styles.workShowcaseBadge, styles.workShowcaseBadgeCompleted]}>
-                <Text style={styles.workShowcaseBadgeText}>{data.analytics.tasksCompleted}</Text>
-              </View>
+                  <Text style={styles.chevronIcon}>›</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-
-            <View style={styles.workShowcaseStats}>
-              <View style={styles.workStatItem}>
-                <Text style={styles.workStatNumber}>{data.analytics.tasksCompleted}</Text>
-                <Text style={styles.workStatLabel}>Tasks</Text>
-              </View>
-              <View style={styles.workStatDivider} />
-              <View style={styles.workStatItem}>
-                <Text style={styles.workStatNumber}>{data.analytics.householdEfficiency}%</Text>
-                <Text style={styles.workStatLabel}>Efficiency</Text>
-              </View>
-              <View style={styles.workStatDivider} />
-              <View style={styles.workStatItem}>
-                <Text style={styles.workStatNumber}>{data.analytics.avgTasksPerWeek}</Text>
-                <Text style={styles.workStatLabel}>Per Week</Text>
-              </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No upcoming tasks</Text>
             </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Analytics Widgets */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Household Analytics</Text>
-        <View style={styles.analyticsGrid}>
-          <View style={[styles.analyticsCard, styles.analyticsCard1]}>
-            <View style={styles.analyticsIconContainer}>
-              <Text style={styles.analyticsIcon}>✅</Text>
-            </View>
-            <Text style={styles.analyticsNumber}>{data.analytics.tasksCompleted}</Text>
-            <Text style={styles.analyticsLabel}>Tasks Completed</Text>
-            <Text style={styles.analyticsSubtext}>This month</Text>
-          </View>
-
-          <View style={[styles.analyticsCard, styles.analyticsCard2]}>
-            <View style={styles.analyticsIconContainer}>
-              <Text style={styles.analyticsIcon}>💰</Text>
-            </View>
-            <Text style={styles.analyticsNumber}>${data.analytics.totalSpent.toFixed(0)}</Text>
-            <Text style={styles.analyticsLabel}>Total Spent</Text>
-            <Text style={styles.analyticsSubtext}>This month</Text>
-          </View>
-
-          <View style={[styles.analyticsCard, styles.analyticsCard3]}>
-            <View style={styles.analyticsIconContainer}>
-              <Text style={styles.analyticsIcon}>📈</Text>
-            </View>
-            <Text style={styles.analyticsNumber}>{data.analytics.avgTasksPerWeek}</Text>
-            <Text style={styles.analyticsLabel}>Avg Tasks/Week</Text>
-            <Text style={styles.analyticsSubtext}>Last 4 weeks</Text>
-          </View>
-
-          <View style={[styles.analyticsCard, styles.analyticsCard4]}>
-            <View style={styles.analyticsIconContainer}>
-              <Text style={styles.analyticsIcon}>⚡</Text>
-            </View>
-            <Text style={styles.analyticsNumber}>{data.analytics.householdEfficiency}%</Text>
-            <Text style={styles.analyticsLabel}>Efficiency</Text>
-            <Text style={styles.analyticsSubtext}>Completion rate</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Activity Feed */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🔔 Recent Activity</Text>
-          <TouchableOpacity onPress={() => router.push('/(app)/household/activity')}>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+          )}
         </View>
 
-        {data.activityFeed.length > 0 ? (
-          <View style={styles.activityFeedContainer}>
-            {data.activityFeed.slice(0, 5).map((activity, index) => (
-              <View key={activity.id} style={styles.activityItem}>
-                <View style={styles.activityIconContainer}>
-                  <Text style={styles.activityIcon}>
-                    {activity.type === 'task' && activity.status === 'completed' ? '✅' :
-                     activity.type === 'task' ? '📋' :
-                     activity.type === 'bill' ? '💰' : '🔔'}
-                  </Text>
-                </View>
-                <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>
-                    {activity.status === 'completed' ? 'Completed' : 'Created'} task: {activity.title}
-                  </Text>
-                  <Text style={styles.activityUser}>by {activity.user}</Text>
-                  <Text style={styles.activityTime}>
-                    {new Date(activity.timestamp).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </Text>
-                </View>
-                <View style={styles.activityIndicator} />
-              </View>
-            ))}
+        {/* Bills Overview */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Bills</Text>
+            <TouchableOpacity onPress={() => router.push('/(app)/bills')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No recent activity</Text>
-            <Text style={styles.emptyStateSubtext}>Start creating tasks to see activity here</Text>
-          </View>
-        )}
-      </View>
 
-      {/* Navigation Guide */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>💡 Getting Started</Text>
-        <View style={styles.guideContainer}>
-          <TouchableOpacity
-            style={styles.guideCard}
-            onPress={() => router.push('/(app)/tasks')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.guideIconContainer}>
-              <Text style={styles.guideIcon}>📋</Text>
+          {data.recentBills.length > 0 ? (
+            <View style={styles.billsList}>
+              {data.recentBills.slice(0, 3).map((bill, index) => (
+                <TouchableOpacity
+                  key={bill.id}
+                  style={styles.billItem}
+                  onPress={() => router.push(`/(app)/bills/${bill.id}`)}
+                >
+                  <View style={styles.billContent}>
+                    <Text style={styles.billTitle}>{bill.title}</Text>
+                    <Text style={styles.billAmount}>${bill.amount}</Text>
+                  </View>
+                  <Text style={styles.chevronIcon}>›</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-            <View style={styles.guideContent}>
-              <Text style={styles.guideTitle}>Manage Tasks</Text>
-              <Text style={styles.guideDescription}>View, create, and complete household chores</Text>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No recent bills</Text>
             </View>
-            <View style={styles.guideArrowContainer}>
-              <Text style={styles.guideArrow}>→</Text>
-            </View>
-          </TouchableOpacity>
+          )}
+        </View>
 
-          <TouchableOpacity
-            style={styles.guideCard}
-            onPress={() => router.push('/(app)/bills')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.guideIconContainer}>
-              <Text style={styles.guideIcon}>💰</Text>
-            </View>
-            <View style={styles.guideContent}>
-              <Text style={styles.guideTitle}>Split Bills</Text>
-              <Text style={styles.guideDescription}>Add expenses and track who owes what</Text>
-            </View>
-            <View style={styles.guideArrowContainer}>
-              <Text style={styles.guideArrow}>→</Text>
-            </View>
-          </TouchableOpacity>
+      </ScrollView>
 
-          <TouchableOpacity
-            style={styles.guideCard}
-            onPress={() => router.push('/(app)/bills')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.guideIconContainer}>
-              <Text style={styles.guideIcon}>💰</Text>
-            </View>
-            <View style={styles.guideContent}>
-              <Text style={styles.guideTitle}>Bills & Expenses</Text>
-              <Text style={styles.guideDescription}>Split bills, track payments, and manage household expenses</Text>
-            </View>
-            <View style={styles.guideArrowContainer}>
-              <Text style={styles.guideArrow}>→</Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.guideCard}
-            onPress={() => router.push('/(app)/household/transfer-requests')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.guideIconContainer}>
-              <Text style={styles.guideIcon}>🔄</Text>
-            </View>
-            <View style={styles.guideContent}>
-              <Text style={styles.guideTitle}>Transfer Requests</Text>
-              <Text style={styles.guideDescription}>Manage task transfer requests</Text>
-            </View>
-            <View style={styles.guideArrowContainer}>
-              <Text style={styles.guideArrow}>→</Text>
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => router.push('/(app)/tasks/create')}
+      >
+        <Text style={styles.fabIcon}>+</Text>
+      </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </View>
@@ -1236,8 +961,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingBottom: Platform.OS === 'ios' ? 85 : 65, // Account for new bottom navigation
+    backgroundColor: '#f8f9fa',
   },
   scrollContainer: {
     flex: 1,
@@ -1272,7 +996,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   createHouseholdButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#007AFF',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -1282,192 +1006,183 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+
+  // Header Styles
   header: {
-    padding: 20,
-    paddingTop: 60,
+    backgroundColor: '#fff',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  // Enhanced Personal Welcome Section
-  personalWelcomeSection: {
-    marginBottom: 20,
-  },
-  welcomeGradient: {
-    backgroundColor: '#667eea',
-    borderRadius: 20,
-    padding: 20,
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
   },
   greetingText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  welcomeIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 16,
-  },
-  welcomeEmoji: {
     fontSize: 28,
-  },
-  welcomeSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  welcomeContent: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1a1a1a',
     marginBottom: 4,
   },
-  welcomeSubtext: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
   dateText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 16,
+    color: '#666',
     fontWeight: '500',
   },
-  notificationBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: '#667eea',
-  },
-  notificationBarAlert: {
-    borderLeftColor: '#ff6b6b',
-  },
-  notificationBarSuccess: {
-    borderLeftColor: '#4caf50',
-  },
-  notificationIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#667eea',
+  profileButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  notificationIconAlert: {
-    backgroundColor: '#ff6b6b',
+  profileIcon: {
+    fontSize: 20,
   },
-  notificationIconSuccess: {
-    backgroundColor: '#4caf50',
-  },
-  notificationBadge: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
-  },
-  notificationSubtext: {
-    fontSize: 12,
-    color: '#666',
-  },
-  notificationArrow: {
-    fontSize: 16,
-    color: '#667eea',
-    fontWeight: 'bold',
-  },
-  // Enhanced Cool Household Selector
-  coolHouseholdSelector: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+
+  // Status Card
+  statusCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 8,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  householdSelectorContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  householdSelectorLeft: {
+  statusContent: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  statusSubtitle: {
+    fontSize: 14,
+    color: '#666',
+  },
+  statusEmoji: {
+    fontSize: 24,
+  },
+
+  // Section Styles
+  section: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1a1a1a',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#007AFF',
+    fontWeight: '500',
+  },
+
+  // Household Selector
+  householdSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  householdInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  householdSelectorIcon: {
+  householdIcon: {
     fontSize: 20,
     marginRight: 12,
   },
-  householdSelectorInfo: {
+  householdDetails: {
     flex: 1,
   },
-  householdSelectorName: {
+  householdName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: '600',
+    color: '#1a1a1a',
     marginBottom: 2,
   },
-  householdSelectorHint: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-  dropdownIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownIcon: {
+  householdMeta: {
     fontSize: 14,
-    color: '#667eea',
+    color: '#666',
+  },
+  chevronIcon: {
+    fontSize: 18,
+    color: '#c7c7cc',
     fontWeight: '600',
   },
-  householdSelectorGlow: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: '#667eea',
-    opacity: 0.3,
+
+  // Quick Actions
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickActionCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  quickActionIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickActionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    textAlign: 'center',
+  },
+
+  // Activity List
+  activityList: {
+    gap: 12,
+  },
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  activityIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    width: 24,
+    textAlign: 'center',
+  },
+  activityContent: {
+    flex: 1,
+  },
+  activityText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  activityTime: {
+    fontSize: 12,
+    color: '#666',
   },
 
   householdCard: {
@@ -2602,14 +2317,90 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
   },
-  workStatLabel: {
-    fontSize: 12,
+
+  // Tasks List
+  tasksList: {
+    gap: 8,
+  },
+  taskItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  taskDue: {
+    fontSize: 14,
+    color: '#666',
+  },
+
+  // Bills List
+  billsList: {
+    gap: 8,
+  },
+  billItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  billContent: {
+    flex: 1,
+  },
+  billTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  billAmount: {
+    fontSize: 14,
+    color: '#666',
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyStateText: {
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
   },
-  workStatDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#e0e0e0',
+
+  // Floating Action Button
+  fab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: '300',
   },
 })

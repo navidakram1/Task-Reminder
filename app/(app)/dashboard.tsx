@@ -759,35 +759,8 @@ export default function DashboardScreen() {
               <Text style={styles.modalAddText}>Create or Join Household</Text>
             </TouchableOpacity>
           </ScrollView>
-      </Modal>
-    </View>
-  )
-}
-                <TouchableOpacity
-                  style={styles.createFirstHouseholdButton}
-                  onPress={() => {
-                    setShowHouseholdModal(false)
-                    router.push('/(onboarding)/create-join-household')
-                  }}
-                >
-                  <Text style={styles.createFirstHouseholdButtonText}>Create Your First Household</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </ScrollView>
         </View>
       </Modal>
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.floatingActionButton}
-        onPress={() => router.push('/(app)/tasks/create')}
-        activeOpacity={0.8}
-      >
-        <View style={styles.fabGradient}>
-          <Text style={styles.fabIcon}>+</Text>
-        </View>
-      </TouchableOpacity>
     </View>
   )
 }

@@ -705,8 +705,6 @@ export default function DashboardScreen() {
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
-  )
 
       {/* Household Switcher Modal */}
       <Modal

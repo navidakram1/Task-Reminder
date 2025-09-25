@@ -18,8 +18,7 @@ const { width } = Dimensions.get('window')
 interface TabItem {
   name: string
   title: string
-  emoji?: string
-  animation?: any
+  emoji: string
   route: string
 }
 
@@ -31,12 +30,12 @@ interface QuickAction {
 }
 
 const tabs: TabItem[] = [
-  { name: 'dashboard', title: 'Home', animation: require('../../assets/animations/home.json'), route: '/(app)/dashboard' },
-  { name: 'tasks', title: 'Tasks', animation: require('../../assets/animations/tasks.json'), route: '/(app)/tasks' },
-  { name: 'bills', title: 'Bills', animation: require('../../assets/animations/bills.json'), route: '/(app)/bills' },
-  { name: 'review', title: 'Review', animation: require('../../assets/animations/approvals.json'), route: '/(app)/approvals' },
-  { name: 'proposals', title: 'Proposals', animation: require('../../assets/animations/proposals.json'), route: '/(app)/proposals' },
-  { name: 'settings', title: 'Settings', animation: require('../../assets/animations/settings.json'), route: '/(app)/settings' },
+  { name: 'dashboard', title: 'Home', emoji: '🏠', route: '/(app)/dashboard' },
+  { name: 'tasks', title: 'Tasks', emoji: '✅', route: '/(app)/tasks' },
+  { name: 'bills', title: 'Bills', emoji: '💰', route: '/(app)/bills' },
+  { name: 'review', title: 'Review', emoji: '⭐', route: '/(app)/approvals' },
+  { name: 'proposals', title: 'Proposals', emoji: '📋', route: '/(app)/proposals' },
+  { name: 'settings', title: 'Settings', emoji: '⚙️', route: '/(app)/settings' },
 ]
 
 const quickActions: QuickAction[] = [
@@ -137,22 +136,12 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
           styles.tabIconContainer,
           isFocused && styles.tabIconContainerActive
         ]}>
-          {tab.animation ? (
-            <LottieView
-              source={tab.animation}
-              style={styles.lottieIcon}
-              autoPlay={isFocused}
-              loop={false}
-              speed={1.5}
-            />
-          ) : (
-            <Text style={[
-              styles.tabIcon,
-              isFocused && styles.tabIconActive
-            ]}>
-              {tab.emoji}
-            </Text>
-          )}
+          <Text style={[
+            styles.tabIcon,
+            isFocused && styles.tabIconActive
+          ]}>
+            {tab.emoji}
+          </Text>
         </View>
         <Text style={[
           styles.tabLabel,
@@ -327,10 +316,6 @@ const styles = StyleSheet.create({
   tabIconActive: {
     fontSize: 22,
     color: '#ffffff',
-  },
-  lottieIcon: {
-    width: 28,
-    height: 28,
   },
   tabLabel: {
     fontSize: 10,

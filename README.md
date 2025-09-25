@@ -99,6 +99,9 @@ npx expo start --android
 5. **Start the development server**
    ```bash
    npx expo start
+   to fix:
+   npx expo install --fix
+    npx expo start --clear
    ```
 
 6. **Run on device/simulator**

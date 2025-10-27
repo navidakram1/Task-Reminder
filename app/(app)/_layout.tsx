@@ -76,6 +76,12 @@ export default function AppLayout() {
           href: null, // Hide from tab bar
         }}
       />
+      <Tabs.Screen
+        name="shopping"
+        options={{
+          href: null, // Hide from tab bar - can be accessed via navigation
+        }}
+      />
     </Tabs>
   )
 }

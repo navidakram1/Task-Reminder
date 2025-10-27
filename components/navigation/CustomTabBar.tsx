@@ -1,6 +1,9 @@
+import { TAB_BAR_THEME } from '@/constants/TabBarTheme'
+import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
+import * as Haptics from 'expo-haptics'
 import { router } from 'expo-router'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
     Animated,
     Dimensions,
@@ -18,50 +21,55 @@ const { width } = Dimensions.get('window')
 interface TabItem {
   name: string
   title: string
-  emoji: string
+  icon: keyof typeof Ionicons.glyphMap
   route: string
 }
 
 interface QuickAction {
   title: string
-  emoji: string
+  icon: keyof typeof Ionicons.glyphMap
   route: string
   description: string
+  color: string
 }
 
 const tabs: TabItem[] = [
-  { name: 'dashboard', title: 'Home', emoji: '🏠', route: '/(app)/dashboard' },
-  { name: 'tasks', title: 'Tasks', emoji: '✅', route: '/(app)/tasks' },
-  { name: 'bills', title: 'Bills', emoji: '💰', route: '/(app)/bills' },
-  { name: 'review', title: 'Review', emoji: '⭐', route: '/(app)/approvals' },
-  { name: 'proposals', title: 'Proposals', emoji: '📋', route: '/(app)/proposals' },
-  { name: 'settings', title: 'Settings', emoji: '⚙️', route: '/(app)/settings' },
+  { name: 'dashboard', title: 'Home', icon: 'home', route: '/(app)/dashboard' },
+  { name: 'tasks', title: 'Tasks', icon: 'checkmark-circle', route: '/(app)/tasks' },
+  { name: 'bills', title: 'Bills', icon: 'wallet', route: '/(app)/bills' },
+  { name: 'shopping', title: 'Shopping', icon: 'cart', route: '/(app)/shopping' },
+  { name: 'proposals', title: 'Proposals', icon: 'document-text', route: '/(app)/proposals' },
+  { name: 'settings', title: 'Settings', icon: 'settings', route: '/(app)/settings' },
 ]
 
 const quickActions: QuickAction[] = [
   {
     title: 'New Task',
-    emoji: '✅',
+    icon: 'add-circle',
     route: '/(app)/tasks/create',
-    description: 'Create a new task'
+    description: 'Create a new task',
+    color: '#667eea'
   },
   {
     title: 'Add Bill',
-    emoji: '💰',
+    icon: 'cash',
     route: '/(app)/bills/create',
-    description: 'Split a new bill'
+    description: 'Split a new bill',
+    color: '#10b981'
   },
   {
-    title: 'New Proposal',
-    emoji: '📋',
-    route: '/(app)/proposals/create',
-    description: 'Create a proposal'
+    title: 'New Shopping List',
+    icon: 'cart',
+    route: '/(app)/shopping/create',
+    description: 'Create shopping list',
+    color: '#FF6B6B'
   },
   {
-    title: 'Add Review',
-    emoji: '⭐',
+    title: 'Request Task Review',
+    icon: 'checkmark-done-circle',
     route: '/(app)/approvals/create',
-    description: 'Submit for review'
+    description: 'Ask for task verification',
+    color: '#ec4899'
   },
 ]
 
@@ -75,6 +83,25 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
   const [showBubble, setShowBubble] = useState(false)
   const bubbleAnimation = useRef(new Animated.Value(0)).current
   const scaleAnimation = useRef(new Animated.Value(0)).current
+  const tabBarOpacity = useRef(new Animated.Value(0)).current
+  const tabBarTranslateY = useRef(new Animated.Value(20)).current
+
+  // Animate tab bar on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(tabBarOpacity, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(tabBarTranslateY, {
+        toValue: 0,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }, [])
 
   const showBubbleMenu = () => {
     setShowBubble(true)
@@ -120,50 +147,144 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
   const renderTabButton = (tab: TabItem, index: number) => {
     const isFocused = state.index === index
+    const scaleAnim = useRef(new Animated.Value(1)).current
+    const opacityAnim = useRef(new Animated.Value(isFocused ? 1 : 0.6)).current
+
+    const handlePress = () => {
+      if (!isFocused) {
+        // Haptic feedback
+        if (Platform.OS === 'ios') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+        }
+
+        // Press animation
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(scaleAnim, {
+              toValue: 0.85,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 0.4,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.spring(scaleAnim, {
+              toValue: 1,
+              friction: 3,
+              tension: 40,
+              useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start()
+
+        router.push(tab.route as any)
+      }
+    }
 
     return (
       <TouchableOpacity
         key={tab.name}
         style={styles.tabButton}
-        onPress={() => {
-          if (!isFocused) {
-            router.push(tab.route as any)
-          }
-        }}
-        activeOpacity={0.7}
+        onPress={handlePress}
+        activeOpacity={1}
       >
-        <View style={[
+        <Animated.View style={[
           styles.tabIconContainer,
-          isFocused && styles.tabIconContainerActive
+          isFocused && styles.tabIconContainerActive,
+          {
+            transform: [{ scale: scaleAnim }],
+            opacity: opacityAnim,
+          }
         ]}>
-          <Text style={[
-            styles.tabIcon,
-            isFocused && styles.tabIconActive
-          ]}>
-            {tab.emoji}
-          </Text>
-        </View>
-        <Text style={[
-          styles.tabLabel,
-          isFocused && styles.tabLabelActive
-        ]}>
+          <Ionicons
+            name={isFocused ? tab.icon : (tab.icon + '-outline' as any)}
+            size={isFocused ? 22 : 20}
+            color={isFocused ? TAB_BAR_THEME.colors.activeIcon : TAB_BAR_THEME.colors.inactiveIcon}
+          />
+        </Animated.View>
+        <Text
+          style={[
+            styles.tabLabel,
+            isFocused && styles.tabLabelActive
+          ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {tab.title}
         </Text>
       </TouchableOpacity>
     )
   }
 
-  const renderPlusButton = () => (
-    <TouchableOpacity
-      style={styles.plusButton}
-      onPress={showBubbleMenu}
-      activeOpacity={0.8}
-    >
-      <View style={styles.plusButtonInner}>
-        <Text style={styles.plusIcon}>+</Text>
-      </View>
-    </TouchableOpacity>
-  )
+  const renderPlusButton = () => {
+    const plusScale = useRef(new Animated.Value(1)).current
+    const plusRotate = useRef(new Animated.Value(0)).current
+
+    const handlePlusPress = () => {
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+      }
+
+      // Rotate and scale animation
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(plusScale, {
+            toValue: 0.85,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.spring(plusScale, {
+            toValue: 1,
+            friction: 3,
+            tension: 40,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(plusRotate, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        plusRotate.setValue(0)
+      })
+
+      showBubbleMenu()
+    }
+
+    const rotation = plusRotate.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '135deg'],
+    })
+
+    return (
+      <TouchableOpacity
+        style={styles.plusButton}
+        onPress={handlePlusPress}
+        activeOpacity={1}
+      >
+        <Animated.View
+          style={[
+            styles.plusButtonInner,
+            {
+              transform: [{ scale: plusScale }, { rotate: rotation }],
+            }
+          ]}
+        >
+          <Ionicons name="add" size={28} color={TAB_BAR_THEME.colors.activeIcon} />
+        </Animated.View>
+      </TouchableOpacity>
+    )
+  }
 
   const renderBubbleMenu = () => (
     <Modal
@@ -191,7 +312,11 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
               },
             ]}
           >
-            <BlurView intensity={20} style={styles.bubbleContent}>
+            <BlurView
+              intensity={TAB_BAR_THEME.blur.bubble.intensity}
+              tint={TAB_BAR_THEME.blur.bubble.tint as any}
+              style={styles.bubbleContent}
+            >
               <View style={styles.bubbleArrow} />
               {quickActions.map((action, index) => (
                 <TouchableOpacity
@@ -200,11 +325,16 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
                     styles.bubbleItem,
                     index === quickActions.length - 1 && styles.bubbleItemLast
                   ]}
-                  onPress={() => handleQuickAction(action.route)}
+                  onPress={() => {
+                    if (Platform.OS === 'ios') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+                    }
+                    handleQuickAction(action.route)
+                  }}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.bubbleItemIcon}>
-                    <Text style={styles.bubbleItemEmoji}>{action.emoji}</Text>
+                  <View style={[styles.bubbleItemIcon, { backgroundColor: action.color + '15' }]}>
+                    <Ionicons name={action.icon} size={TAB_BAR_THEME.dimensions.bubbleActionIconSize} color={action.color} />
                   </View>
                   <View style={styles.bubbleItemContent}>
                     <Text style={styles.bubbleItemTitle}>{action.title}</Text>
@@ -221,8 +351,20 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
 
   return (
     <>
-      <View style={styles.tabBar}>
-        <BlurView intensity={20} style={styles.tabBarBlur}>
+      <Animated.View
+        style={[
+          styles.tabBar,
+          {
+            opacity: tabBarOpacity,
+            transform: [{ translateY: tabBarTranslateY }],
+          }
+        ]}
+      >
+        <BlurView
+          intensity={TAB_BAR_THEME.blur.tabBar.intensity}
+          tint={TAB_BAR_THEME.blur.tabBar.tint as any}
+          style={styles.tabBarBlur}
+        >
           <View style={styles.tabBarContent}>
             {/* Left tabs */}
             <View style={styles.tabSection}>
@@ -238,7 +380,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: CustomT
             </View>
           </View>
         </BlurView>
-      </View>
+      </Animated.View>
 
       {renderBubbleMenu()}
     </>
@@ -256,49 +398,53 @@ const styles = StyleSheet.create({
   },
   tabBarBlur: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderTopLeftRadius: 25,
-    borderTopRightRadius: 25,
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.95)',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.1 : 0.15,
+    shadowRadius: 25,
     elevation: 30,
+    overflow: 'hidden',
+    ...(Platform.OS === 'ios' && {
+      borderTopWidth: 0.5,
+      borderTopColor: 'rgba(255, 255, 255, 0.8)',
+    }),
   },
   tabBarContent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
   },
   tabSection: {
     flexDirection: 'row',
     flex: 1,
-    justifyContent: 'space-evenly',
+    justifyContent: 'space-around',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   tabButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderRadius: 20,
-    minWidth: 56,
-    flex: 1,
-    maxWidth: 80,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 16,
+    minWidth: 52,
+    maxWidth: 64,
   },
   tabIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    marginBottom: 6,
-    transition: 'all 0.2s ease',
+    marginBottom: 2,
   },
   tabIconContainerActive: {
     backgroundColor: '#667eea',
@@ -306,32 +452,27 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
-    elevation: 12,
-    transform: [{ scale: 1.05 }],
-  },
-  tabIcon: {
-    fontSize: 20,
-    color: '#8e8e93',
-  },
-  tabIconActive: {
-    fontSize: 22,
-    color: '#ffffff',
+    elevation: 10,
   },
   tabLabel: {
     fontSize: 10,
     fontWeight: '600',
     color: '#8e8e93',
     marginTop: 2,
+    letterSpacing: 0,
+    textAlign: 'center',
+    width: '100%',
   },
   tabLabelActive: {
     color: '#667eea',
     fontWeight: '700',
+    fontSize: 10,
   },
   // Plus Button Styles
   plusButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: '#667eea',
     alignItems: 'center',
     justifyContent: 'center',
@@ -339,30 +480,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.45,
     shadowRadius: 20,
-    elevation: 20,
-    marginHorizontal: 16,
-    marginTop: -12,
+    elevation: 18,
+    marginHorizontal: 12,
+    marginTop: -10,
     borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.95)',
   },
   plusButtonInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#667eea',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  plusIcon: {
-    fontSize: 32,
-    fontWeight: '200',
-    color: '#ffffff',
-    lineHeight: 32,
   },
   // Bubble Menu Styles
   bubbleOverlay: {
@@ -376,20 +506,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bubbleContent: {
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: 24,
+    backgroundColor: Platform.OS === 'ios' ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 28,
     paddingVertical: 20,
     paddingHorizontal: 8,
     minWidth: 300,
     maxWidth: 320,
     shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.25,
+    shadowRadius: 32,
     elevation: 24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    ...(Platform.OS === 'ios' && {
+      borderWidth: 0.5,
+      borderColor: 'rgba(255, 255, 255, 0.9)',
+    }),
   },
   bubbleArrow: {
     position: 'absolute',
@@ -422,21 +554,17 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   bubbleItemIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f8f9fa',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-    shadowColor: '#667eea',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 4,
-  },
-  bubbleItemEmoji: {
-    fontSize: 22,
   },
   bubbleItemContent: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import { APP_THEME } from '../../constants/AppTheme'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 
@@ -75,12 +76,33 @@ export default function DashboardScreen() {
   const [households, setHouseholds] = useState<Household[]>([])
   const [showHouseholdModal, setShowHouseholdModal] = useState(false)
   const [switchingHousehold, setSwitchingHousehold] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const { user } = useAuth()
 
   useEffect(() => {
     fetchDashboardData()
     fetchUserHouseholds()
+    fetchUserProfile()
   }, [])
+
+  const fetchUserProfile = async () => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error fetching profile:', error)
+      } else {
+        setUserProfile(data)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    }
+  }
 
   const fetchUserHouseholds = async () => {
     if (!user) return
@@ -498,45 +520,61 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Clean Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.greetingText}>
-                {getGreeting()}, {getUserDisplayName()}
-              </Text>
-              <Text style={styles.dateText}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </Text>
+        {/* Modern Header with Gradient */}
+        <View style={styles.headerGradient}>
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
+              <View style={styles.greetingContainer}>
+                <Text style={styles.greetingText}>
+                  {getGreeting()}, {getUserDisplayName()}
+                </Text>
+                <Text style={styles.dateText}>
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => router.push('/(app)/settings')}
+                activeOpacity={0.8}
+              >
+                {userProfile?.avatar_url ? (
+                  <Image
+                    source={{ uri: userProfile.avatar_url }}
+                    style={styles.profileAvatar}
+                  />
+                ) : (
+                  <View style={styles.profilePlaceholder}>
+                    <Text style={styles.profileIcon}>👤</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => router.push('/(app)/settings')}
-            >
-              <Text style={styles.profileIcon}>👤</Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Status Summary */}
-          <View style={styles.statusCard}>
-            <View style={styles.statusContent}>
-              <Text style={styles.statusTitle}>
-                {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
-                  ? 'All caught up!'
-                  : `${data.upcomingTasks.length + data.pendingTransfers.length} items need attention`
-                }
-              </Text>
-              <Text style={styles.statusSubtitle}>
-                {data.upcomingTasks.length} tasks • {data.recentBills.length} recent bills
-              </Text>
+            {/* Enhanced Status Card */}
+            <View style={styles.statusCard}>
+              <View style={styles.statusContent}>
+                <View style={styles.statusIconContainer}>
+                  <Text style={styles.statusIcon}>
+                    {(data.upcomingTasks.length + data.pendingTransfers.length) === 0 ? '✨' : '📋'}
+                  </Text>
+                </View>
+                <View style={styles.statusTextContainer}>
+                  <Text style={styles.statusTitle}>
+                    {(data.upcomingTasks.length + data.pendingTransfers.length) === 0
+                      ? 'All caught up!'
+                      : `${data.upcomingTasks.length + data.pendingTransfers.length} items need attention`
+                    }
+                  </Text>
+                  <Text style={styles.statusSubtitle}>
+                    {data.upcomingTasks.length} tasks • {data.recentBills.length} bills
+                  </Text>
+                </View>
+              </View>
             </View>
-            {(data.upcomingTasks.length + data.pendingTransfers.length) === 0 && (
-              <Text style={styles.statusEmoji}>🎉</Text>
-            )}
           </View>
         </View>
 
@@ -557,40 +595,56 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Modern Grid */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity
-              style={styles.quickActionCard}
+              style={[styles.quickActionCard, styles.quickActionCardPrimary]}
               onPress={() => router.push('/(app)/tasks/create')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.quickActionIcon}>📝</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>📝</Text>
+              </View>
               <Text style={styles.quickActionTitle}>Add Task</Text>
+              <Text style={styles.quickActionSubtitle}>Create new task</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.quickActionCard}
+              style={[styles.quickActionCard, styles.quickActionCardSecondary]}
               onPress={() => router.push('/(app)/bills/create')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.quickActionIcon}>💰</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>💰</Text>
+              </View>
               <Text style={styles.quickActionTitle}>Add Bill</Text>
+              <Text style={styles.quickActionSubtitle}>Split expense</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.quickActionCard}
+              style={[styles.quickActionCard, styles.quickActionCardTertiary]}
               onPress={() => router.push('/(app)/tasks/random-assignment')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.quickActionIcon}>🎲</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>🎲</Text>
+              </View>
               <Text style={styles.quickActionTitle}>Auto Assign</Text>
+              <Text style={styles.quickActionSubtitle}>Fair distribution</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.quickActionCard}
+              style={[styles.quickActionCard, styles.quickActionCardQuaternary]}
               onPress={() => router.push('/(app)/household/members')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.quickActionIcon}>👥</Text>
+              <View style={styles.quickActionIconContainer}>
+                <Text style={styles.quickActionIcon}>👥</Text>
+              </View>
               <Text style={styles.quickActionTitle}>Members</Text>
+              <Text style={styles.quickActionSubtitle}>View household</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -766,7 +820,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: APP_THEME.colors.background,
   },
   scrollContainer: {
     flex: 1,
@@ -777,82 +831,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: APP_THEME.typography.fontSize.base,
+    color: APP_THEME.colors.textSecondary,
   },
   noHouseholdContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: APP_THEME.spacing.lg,
   },
   noHouseholdTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16,
+    fontSize: APP_THEME.typography.fontSize.xxl,
+    fontWeight: APP_THEME.typography.fontWeight.bold,
+    color: APP_THEME.colors.textPrimary,
+    marginBottom: APP_THEME.spacing.base,
     textAlign: 'center',
   },
   noHouseholdText: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: APP_THEME.typography.fontSize.base,
+    color: APP_THEME.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 30,
+    marginBottom: APP_THEME.spacing.xl,
   },
   createHouseholdButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    backgroundColor: APP_THEME.colors.primary,
+    paddingVertical: APP_THEME.spacing.base,
+    paddingHorizontal: APP_THEME.spacing.xl,
+    borderRadius: APP_THEME.borderRadius.lg,
   },
   createHouseholdButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: APP_THEME.colors.surface,
+    fontSize: APP_THEME.typography.fontSize.lg,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
   },
 
   // Header Styles
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: APP_THEME.colors.surface,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: APP_THEME.spacing.lg,
+    paddingBottom: APP_THEME.spacing.lg,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: APP_THEME.spacing.lg,
   },
   greetingText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: APP_THEME.typography.fontSize.xxxl,
+    fontWeight: APP_THEME.typography.fontWeight.bold,
+    color: APP_THEME.colors.textPrimary,
+    marginBottom: APP_THEME.spacing.xs,
   },
   dateText: {
-    fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: APP_THEME.typography.fontSize.base,
+    color: APP_THEME.colors.textSecondary,
+    fontWeight: APP_THEME.typography.fontWeight.medium,
   },
   profileButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: APP_THEME.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#667eea',
+    overflow: 'hidden',
   },
   profileIcon: {
     fontSize: 20,
   },
+  profileAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
 
   // Status Card
   statusCard: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: APP_THEME.colors.background,
+    borderRadius: APP_THEME.borderRadius.base,
+    padding: APP_THEME.spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -861,14 +923,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    fontSize: APP_THEME.typography.fontSize.base,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
+    color: APP_THEME.colors.textPrimary,
+    marginBottom: APP_THEME.spacing.xs,
   },
   statusSubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: APP_THEME.typography.fontSize.sm,
+    color: APP_THEME.colors.textSecondary,
   },
   statusEmoji: {
     fontSize: 24,
@@ -876,27 +938,27 @@ const styles = StyleSheet.create({
 
   // Section Styles
   section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: APP_THEME.colors.surface,
+    marginHorizontal: APP_THEME.spacing.lg,
+    marginBottom: APP_THEME.spacing.base,
+    borderRadius: APP_THEME.borderRadius.base,
+    padding: APP_THEME.spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: APP_THEME.spacing.base,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: APP_THEME.typography.fontSize.lg,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
+    color: APP_THEME.colors.textPrimary,
   },
   seeAllText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
+    fontSize: APP_THEME.typography.fontSize.sm,
+    color: APP_THEME.colors.primary,
+    fontWeight: APP_THEME.typography.fontWeight.medium,
   },
 
   // Household Selector
@@ -904,7 +966,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    paddingVertical: APP_THEME.spacing.xs,
   },
   householdInfo: {
     flexDirection: 'row',
@@ -913,66 +975,66 @@ const styles = StyleSheet.create({
   },
   householdIcon: {
     fontSize: 20,
-    marginRight: 12,
+    marginRight: APP_THEME.spacing.base,
   },
   householdDetails: {
     flex: 1,
   },
   householdName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 2,
+    fontSize: APP_THEME.typography.fontSize.base,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
+    color: APP_THEME.colors.textPrimary,
+    marginBottom: APP_THEME.spacing.xs,
   },
   householdMeta: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: APP_THEME.typography.fontSize.sm,
+    color: APP_THEME.colors.textSecondary,
   },
   chevronIcon: {
     fontSize: 18,
-    color: '#c7c7cc',
-    fontWeight: '600',
+    color: APP_THEME.colors.textTertiary,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
   },
 
   // Quick Actions
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: APP_THEME.spacing.base,
   },
   quickActionCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: APP_THEME.colors.background,
+    borderRadius: APP_THEME.borderRadius.base,
+    padding: APP_THEME.spacing.base,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: APP_THEME.colors.border,
   },
   quickActionIcon: {
     fontSize: 24,
-    marginBottom: 8,
+    marginBottom: APP_THEME.spacing.sm,
   },
   quickActionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: APP_THEME.typography.fontSize.sm,
+    fontWeight: APP_THEME.typography.fontWeight.semibold,
+    color: APP_THEME.colors.textPrimary,
     textAlign: 'center',
   },
 
   // Activity List
   activityList: {
-    gap: 12,
+    gap: APP_THEME.spacing.base,
   },
   activityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: APP_THEME.spacing.sm,
   },
   activityIcon: {
     fontSize: 20,
-    marginRight: 12,
+    marginRight: APP_THEME.spacing.base,
     width: 24,
     textAlign: 'center',
   },
@@ -980,308 +1042,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1a1a1a',
-    marginBottom: 2,
+    fontSize: APP_THEME.typography.fontSize.sm,
+    fontWeight: APP_THEME.typography.fontWeight.medium,
+    color: APP_THEME.colors.textPrimary,
+    marginBottom: APP_THEME.spacing.xs,
   },
   activityTime: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: APP_THEME.typography.fontSize.xs,
+    color: APP_THEME.colors.textSecondary,
   },
 
-  householdCard: {
-    backgroundColor: '#667eea',
-    padding: 20,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-    marginBottom: 20,
-  },
-  householdCardGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: '#667eea',
-  },
-  householdHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  householdBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  householdStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  statNumber: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#e8eaff',
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#8a9cff',
-    marginHorizontal: 16,
-  },
-  arrowCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  householdInfo: {
-    flex: 1,
-  },
-  householdSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  householdName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 4,
-    flex: 1,
-  },
-  dropdownIcon: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginLeft: 8,
-    marginBottom: 4,
-  },
-  activityHint: {
-    fontSize: 14,
-    color: '#e8f0fe',
-  },
-  householdIcon: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  householdIconText: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  quickActions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    gap: 12,
-  },
-  quickActionButton: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-  },
-  quickActionIcon: {
-    fontSize: 24,
-    marginBottom: 4,
-  },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 25,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: '#667eea',
-    fontWeight: '500',
-  },
-  taskCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskInfo: {
-    flex: 1,
-  },
-  taskTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  taskEmoji: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  taskTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-  },
-  taskDescription: {
-    fontSize: 14,
-    color: '#666',
-  },
-  taskMeta: {
-    alignItems: 'flex-end',
-  },
-  taskDueDate: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
-  taskStatus: {
-    fontSize: 12,
-    fontWeight: '500',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    textTransform: 'capitalize',
-  },
-  status_pending: {
-    backgroundColor: '#fff3cd',
-    color: '#856404',
-  },
-  status_transfer_requested: {
-    backgroundColor: '#e2e3ff',
-    color: '#4c4dff',
-  },
-  approveButton: {
-    backgroundColor: '#28a745',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  approveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  rejectButton: {
-    backgroundColor: '#dc3545',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  rejectButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  billCard: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  billInfo: {
-    flex: 1,
-  },
-  billTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  billCategory: {
-    fontSize: 14,
-    color: '#666',
-  },
-  billMeta: {
-    alignItems: 'flex-end',
-  },
-  billAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#28a745',
-    marginBottom: 4,
-  },
-  billDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 8,
-  },
-  emptyStateAction: {
-    fontSize: 14,
-    color: '#667eea',
-    fontWeight: '500',
-  },
+
   // New Quick Actions Grid Styles
   quickActionsGrid: {
     flexDirection: 'row',
@@ -2294,5 +2065,71 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#666',
+  },
+
+  // Enhanced Header Styles
+  headerGradient: {
+    backgroundColor: '#FF6B6B',
+    paddingBottom: 20,
+  },
+  greetingContainer: {
+    flex: 1,
+  },
+  profilePlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Enhanced Status Card
+  statusIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statusIcon: {
+    fontSize: 28,
+  },
+  statusTextContainer: {
+    flex: 1,
+  },
+
+  // Quick Action Cards with Colors
+  quickActionCardPrimary: {
+    backgroundColor: '#FF6B6B',
+    borderColor: '#FF6B6B',
+  },
+  quickActionCardSecondary: {
+    backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
+  },
+  quickActionCardTertiary: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
+  },
+  quickActionCardQuaternary: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  quickActionIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  quickActionSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginTop: 4,
   },
 })

@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import MemberSelector from '../../../components/MemberSelector'
 import ModernSelector from '../../../components/ModernSelector'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
@@ -182,7 +183,7 @@ export default function CreateEditTaskScreen() {
       setTitle(data.title)
       setDescription(data.description || '')
       setDueDate(data.due_date || '')
-      setAssigneeId(data.assignee_id || '')
+      setAssigneeId(data.assigned_to || '')
       setRecurrence(data.recurrence || 'none')
       setSelectedEmoji(data.emoji || '')
     } catch (error) {
@@ -208,7 +209,7 @@ export default function CreateEditTaskScreen() {
         title: title.trim(),
         description: description.trim() || null,
         due_date: dueDate || null,
-        assignee_id: randomAssignment ? null : (assigneeId || null),
+        assigned_to: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
         emoji: selectedEmoji || null,
         priority: priority,

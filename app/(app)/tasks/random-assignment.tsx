@@ -60,7 +60,7 @@ export default function RandomTaskAssignmentScreen() {
         .from('tasks')
         .select(`
           *,
-          assignee:assignee_id (
+          assignee:assigned_to (
             id,
             name
           )
@@ -131,13 +131,13 @@ export default function RandomTaskAssignmentScreen() {
       // Update all task assignments
       const updates = assignments.map(assignment => ({
         id: assignment.task.id,
-        assignee_id: assignment.assignee.id,
+        assigned_to: assignment.assignee.id,
       }))
 
       for (const update of updates) {
         const { error } = await supabase
           .from('tasks')
-          .update({ assignee_id: update.assignee_id })
+          .update({ assigned_to: update.assigned_to })
           .eq('id', update.id)
 
         if (error) throw error

@@ -242,7 +242,7 @@ export default function TaskDetailsScreen() {
     )
   }
 
-  const isAssignee = task.assignee_id === user?.id
+  const isAssignee = task.assigned_to === user?.id
   const isCreator = task.created_by === user?.id
 
   return (

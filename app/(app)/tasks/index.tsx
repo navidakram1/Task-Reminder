@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import {
     Alert,
     Dimensions,
+    Modal,
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -15,6 +16,7 @@ import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
 
 type FilterType = 'all' | 'assigned' | 'pending' | 'completed'
+type TabType = 'all' | 'stats' | 'history'
 
 const { width: screenWidth } = Dimensions.get('window')
 
@@ -25,6 +27,10 @@ export default function TaskListScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [filter, setFilter] = useState<FilterType>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState<TabType>('all')
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [celebrationTask, setCelebrationTask] = useState<any>(null)
+  const [userScore, setUserScore] = useState(0)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -54,7 +60,7 @@ export default function TaskListScreen() {
       // Fetch tasks with simplified query to avoid foreign key issues
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id')
+        .select('id, title, description, due_date, status, assigned_to, emoji, created_at, household_id')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 
@@ -305,15 +311,79 @@ export default function TaskListScreen() {
 
   const handleMarkComplete = async (taskId: string) => {
     try {
+      const task = tasks.find(t => t.id === taskId)
       const { error } = await supabase
         .from('tasks')
         .update({ status: 'completed' })
         .eq('id', taskId)
 
       if (error) throw error
+
+      // Show celebration
+      setCelebrationTask(task)
+      setShowCelebration(true)
+      setTimeout(() => setShowCelebration(false), 3000)
+
+      // Update score
+      setUserScore(prev => prev + 10)
+
       await fetchTasks()
     } catch (error) {
       console.error('Error marking task complete:', error)
+    }
+  }
+
+  const groupTasksByTime = (taskList: any[]) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const weekEnd = new Date(today)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+
+    const groups = {
+      dueToday: [] as any[],
+      whenNeeded: [] as any[],
+      upcomingWeek: [] as any[],
+      overdue: [] as any[]
+    }
+
+    taskList.forEach(task => {
+      if (task.status === 'completed') return
+
+      if (!task.due_date) {
+        groups.whenNeeded.push(task)
+      } else {
+        const dueDate = new Date(task.due_date)
+        dueDate.setHours(0, 0, 0, 0)
+
+        if (dueDate < today) {
+          groups.overdue.push(task)
+        } else if (dueDate.getTime() === today.getTime()) {
+          groups.dueToday.push(task)
+        } else if (dueDate < weekEnd) {
+          groups.upcomingWeek.push(task)
+        }
+      }
+    })
+
+    return groups
+  }
+
+  const calculateUserStats = () => {
+    const completed = tasks.filter(t => t.status === 'completed').length
+    const pending = tasks.filter(t => t.status === 'pending' || !t.status).length
+    const assignedToMe = tasks.filter(t => t.assignee_id === user?.id).length
+    const completedByMe = tasks.filter(t => t.assignee_id === user?.id && t.status === 'completed').length
+
+    return {
+      completed,
+      pending,
+      assignedToMe,
+      completedByMe,
+      completionRate: assignedToMe > 0 ? Math.round((completedByMe / assignedToMe) * 100) : 0
     }
   }
 
@@ -355,6 +425,28 @@ export default function TaskListScreen() {
             </TouchableOpacity>
           </View>
         </View>
+      </View>
+
+      {/* Tab Navigation */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+          onPress={() => setActiveTab('all')}
+        >
+          <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All Tasks</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'stats' && styles.activeTab]}
+          onPress={() => setActiveTab('stats')}
+        >
+          <Text style={[styles.tabText, activeTab === 'stats' && styles.activeTabText]}>Stats</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+          onPress={() => setActiveTab('history')}
+        >
+          <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>History</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Modern Search & Filter Bar */}
@@ -469,7 +561,7 @@ export default function TaskListScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {filteredTasks.length > 0 ? (
+        {activeTab === 'all' && filteredTasks.length > 0 ? (
           filteredTasks.map((task, index) => (
             <View
               key={task.id}
@@ -591,7 +683,100 @@ export default function TaskListScreen() {
             </View>
           </View>
         )}
+
+        {activeTab === 'stats' && (
+          <View style={styles.statsContainer}>
+            {(() => {
+              const stats = calculateUserStats()
+              return (
+                <>
+                  <View style={styles.statsGrid}>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statIcon}>✅</Text>
+                      <Text style={styles.statValue}>{stats.completed}</Text>
+                      <Text style={styles.statLabel}>Completed</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statIcon}>⏳</Text>
+                      <Text style={styles.statValue}>{stats.pending}</Text>
+                      <Text style={styles.statLabel}>Pending</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statIcon}>👤</Text>
+                      <Text style={styles.statValue}>{stats.assignedToMe}</Text>
+                      <Text style={styles.statLabel}>Assigned to Me</Text>
+                    </View>
+                    <View style={styles.statCard}>
+                      <Text style={styles.statIcon}>🎯</Text>
+                      <Text style={styles.statValue}>{stats.completionRate}%</Text>
+                      <Text style={styles.statLabel}>Completion Rate</Text>
+                    </View>
+                  </View>
+                  <View style={styles.scoreCard}>
+                    <Text style={styles.scoreCardTitle}>Your Score</Text>
+                    <Text style={styles.scoreCardValue}>{userScore}</Text>
+                    <Text style={styles.scoreCardSubtitle}>Keep completing tasks to earn more points!</Text>
+                  </View>
+                </>
+              )
+            })()}
+          </View>
+        )}
+
+        {activeTab === 'history' && (
+          <View style={styles.historyContainer}>
+            {tasks.filter(t => t.status === 'completed').length > 0 ? (
+              tasks
+                .filter(t => t.status === 'completed')
+                .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
+                .map((task, index) => (
+                  <View key={task.id} style={[styles.historyCard, { marginBottom: index === tasks.filter(t => t.status === 'completed').length - 1 ? 20 : 12 }]}>
+                    <View style={styles.historyCardContent}>
+                      <Text style={styles.historyCardIcon}>✅</Text>
+                      <View style={styles.historyCardText}>
+                        <Text style={styles.historyCardTitle}>{task.title}</Text>
+                        <Text style={styles.historyCardDate}>
+                          Completed on {new Date(task.updated_at || task.created_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+            ) : (
+              <View style={styles.emptyHistory}>
+                <Text style={styles.emptyHistoryIcon}>📋</Text>
+                <Text style={styles.emptyHistoryTitle}>No completed tasks yet</Text>
+                <Text style={styles.emptyHistoryText}>Complete some tasks to see them here</Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Celebration Modal */}
+      <Modal
+        visible={showCelebration}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCelebration(false)}
+      >
+        <View style={styles.celebrationOverlay}>
+          <View style={styles.celebrationCard}>
+            <Text style={styles.celebrationEmoji}>🎉</Text>
+            <Text style={styles.celebrationTitle}>Task Done!</Text>
+            <Text style={styles.celebrationSubtitle}>
+              You earned +10 points
+            </Text>
+            <Text style={styles.celebrationMessage}>
+              Great job. You finished {celebrationTask?.title}!
+            </Text>
+            <View style={styles.scoreDisplay}>
+              <Text style={styles.scoreLabel}>Your Score</Text>
+              <Text style={styles.scoreValue}>{userScore}</Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Shuffle button removed - now available in task creation */}
     </View>
@@ -1039,5 +1224,219 @@ const styles = StyleSheet.create({
     color: '#667eea',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Tab Styles
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+    paddingHorizontal: 20,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {
+    borderBottomColor: '#667eea',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  activeTabText: {
+    color: '#667eea',
+  },
+  // Celebration Styles
+  celebrationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  celebrationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    width: '80%',
+  },
+  celebrationEmoji: {
+    fontSize: 80,
+    marginBottom: 16,
+  },
+  celebrationTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  celebrationSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 16,
+    fontWeight: '500',
+  },
+  celebrationMessage: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  scoreDisplay: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  scoreValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#667eea',
+  },
+  // Stats Styles
+  statsContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  scoreCard: {
+    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  scoreCardTitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  scoreCardValue: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  scoreCardSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
+  },
+  // History Styles
+  historyContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  historyCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  historyCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  historyCardIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  historyCardText: {
+    flex: 1,
+  },
+  historyCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  historyCardDate: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  emptyHistory: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyHistoryIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyHistoryTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  emptyHistoryText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '500',
   },
 })

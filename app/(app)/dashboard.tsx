@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
+    Image,
     Modal,
     Platform,
     RefreshControl,
@@ -27,6 +28,9 @@ interface DashboardData {
     householdEfficiency: number
   }
   activityFeed: any[]
+  userScore: number
+  scoreLevel: string
+  scoreProgress: number
 }
 
 interface Household {
@@ -70,6 +74,9 @@ export default function DashboardScreen() {
       householdEfficiency: 0,
     },
     activityFeed: [],
+    userScore: 0,
+    scoreLevel: 'Beginner',
+    scoreProgress: 0,
   })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -83,7 +90,56 @@ export default function DashboardScreen() {
     fetchDashboardData()
     fetchUserHouseholds()
     fetchUserProfile()
+    fetchUserScore()
   }, [])
+
+  const calculateScoreLevel = (score: number) => {
+    if (score < 100) return { level: 'Beginner', emoji: '🌱' }
+    if (score < 250) return { level: 'Novice', emoji: '⭐' }
+    if (score < 500) return { level: 'Expert', emoji: '🔥' }
+    if (score < 1000) return { level: 'Master', emoji: '👑' }
+    return { level: 'Legend', emoji: '🏆' }
+  }
+
+  const fetchUserScore = async () => {
+    if (!user) return
+    try {
+      // Calculate score based on completed tasks and bills
+      const { data: completedTasks } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', user.id)
+        .eq('status', 'completed')
+
+      const { data: createdBills } = await supabase
+        .from('bills')
+        .select('id', { count: 'exact', head: true })
+        .eq('paid_by', user.id)
+
+      const completedCount = completedTasks?.length || 0
+      const billsCount = createdBills?.length || 0
+
+      // Score calculation: 10 points per completed task, 5 points per bill
+      const totalScore = (completedCount * 10) + (billsCount * 5)
+      const levelInfo = calculateScoreLevel(totalScore)
+
+      // Calculate progress to next level
+      const levels = [100, 250, 500, 1000]
+      const currentLevelIndex = levels.findIndex(l => totalScore < l)
+      const nextLevel = currentLevelIndex >= 0 ? levels[currentLevelIndex] : 1000
+      const prevLevel = currentLevelIndex > 0 ? levels[currentLevelIndex - 1] : 0
+      const progress = ((totalScore - prevLevel) / (nextLevel - prevLevel)) * 100
+
+      setData(prev => ({
+        ...prev,
+        userScore: totalScore,
+        scoreLevel: levelInfo.level,
+        scoreProgress: Math.min(progress, 100)
+      }))
+    } catch (error) {
+      console.error('Error fetching user score:', error)
+    }
+  }
 
   const fetchUserProfile = async () => {
     if (!user) return
@@ -536,22 +592,37 @@ export default function DashboardScreen() {
                   })}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.profileButton}
-                onPress={() => router.push('/(app)/settings')}
-                activeOpacity={0.8}
-              >
-                {userProfile?.avatar_url ? (
-                  <Image
-                    source={{ uri: userProfile.avatar_url }}
-                    style={styles.profileAvatar}
-                  />
-                ) : (
-                  <View style={styles.profilePlaceholder}>
-                    <Text style={styles.profileIcon}>👤</Text>
+              <View style={styles.headerRightContainer}>
+                {/* Score Badge */}
+                <TouchableOpacity
+                  style={styles.scoreBadge}
+                  onPress={() => router.push('/(app)/social/achievements')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.scoreBadgeEmoji}>⭐</Text>
+                  <View style={styles.scoreBadgeContent}>
+                    <Text style={styles.scoreBadgeValue}>{data.userScore}</Text>
+                    <Text style={styles.scoreBadgeLabel}>{data.scoreLevel}</Text>
                   </View>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.profileButton}
+                  onPress={() => router.push('/(app)/settings')}
+                  activeOpacity={0.8}
+                >
+                  {userProfile?.avatar_url ? (
+                    <Image
+                      source={{ uri: userProfile.avatar_url }}
+                      style={styles.profileAvatar}
+                    />
+                  ) : (
+                    <View style={styles.profilePlaceholder}>
+                      <Text style={styles.profileIcon}>👤</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Enhanced Status Card */}
@@ -2131,5 +2202,39 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 4,
+  },
+
+  // Score Badge Styles
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  scoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    gap: 8,
+  },
+  scoreBadgeEmoji: {
+    fontSize: 18,
+  },
+  scoreBadgeContent: {
+    alignItems: 'flex-start',
+  },
+  scoreBadgeValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  scoreBadgeLabel: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
 })

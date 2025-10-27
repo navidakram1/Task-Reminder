@@ -60,7 +60,7 @@ export default function TaskListScreen() {
       // Fetch tasks with simplified query to avoid foreign key issues
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, description, due_date, status, assigned_to, emoji, created_at, household_id')
+        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 

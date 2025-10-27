@@ -69,7 +69,7 @@ export default function EditTaskScreen() {
         setTitle(task.title || '')
         setDescription(task.description || '')
         setDueDate(task.due_date || '')
-        setAssigneeId(task.assigned_to || '')
+        setAssigneeId(task.assignee_id || '')
         setRecurrence(task.recurrence || 'none')
         setSelectedEmoji(task.emoji || '')
         setPriority(task.priority || 'medium')
@@ -144,7 +144,7 @@ export default function EditTaskScreen() {
         title: title.trim(),
         description: description.trim(),
         due_date: dueDate || null,
-        assigned_to: assigneeId || null,
+        assignee_id: assigneeId || null,
         recurrence,
         emoji: selectedEmoji,
         priority,

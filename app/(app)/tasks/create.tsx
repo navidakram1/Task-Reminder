@@ -183,7 +183,7 @@ export default function CreateEditTaskScreen() {
       setTitle(data.title)
       setDescription(data.description || '')
       setDueDate(data.due_date || '')
-      setAssigneeId(data.assigned_to || '')
+      setAssigneeId(data.assignee_id || '')
       setRecurrence(data.recurrence || 'none')
       setSelectedEmoji(data.emoji || '')
     } catch (error) {
@@ -209,7 +209,7 @@ export default function CreateEditTaskScreen() {
         title: title.trim(),
         description: description.trim() || null,
         due_date: dueDate || null,
-        assigned_to: randomAssignment ? null : (assigneeId || null),
+        assignee_id: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
         emoji: selectedEmoji || null,
         priority: priority,

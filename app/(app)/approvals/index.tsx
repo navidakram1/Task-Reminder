@@ -1,278 +1,322 @@
-import React, { useState, useEffect } from 'react'
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  RefreshControl,
-  Alert,
-  Image,
-} from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { supabase } from '../../../lib/supabase'
+import { useEffect, useState } from 'react'
+import {
+    ActivityIndicator,
+    Alert,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native'
+import { APP_THEME } from '../../../constants/AppTheme'
 import { useAuth } from '../../../contexts/AuthContext'
+import { supabase } from '../../../lib/supabase'
 
-export default function ApprovalRequestsScreen() {
-  const [approvals, setApprovals] = useState<any[]>([])
+interface PendingTask {
+  id: string
+  title: string
+  description: string
+  emoji: string
+  completed_at: string
+  assignee_name: string
+  assignee_email: string
+  assignee_photo: string
+  creator_name: string
+  household_name: string
+}
+
+export default function ApprovalsScreen() {
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState<{ [key: string]: string }>({})
   const { user } = useAuth()
 
   useEffect(() => {
-    fetchApprovals()
+    fetchPendingTasks()
   }, [])
 
-  const fetchApprovals = async () => {
-    if (!user) return
-
+  const fetchPendingTasks = async () => {
     try {
-      // Get user's household
-      const { data: householdMember } = await supabase
+      setRefreshing(true)
+
+      // Get user's households
+      const { data: households } = await supabase
         .from('household_members')
         .select('household_id')
-        .eq('user_id', user.id)
-        .single()
+        .eq('user_id', user?.id)
 
-      if (!householdMember) return
+      if (!households || households.length === 0) {
+        setPendingTasks([])
+        return
+      }
 
-      // Fetch pending approvals for tasks in the household
-      const { data, error } = await supabase
-        .from('task_approvals')
-        .select(`
-          *,
-          tasks (
-            id,
-            title,
-            description,
-            household_id
-          ),
-          submitted_by_user:submitted_by (
-            id,
-            name,
-            email
-          )
-        `)
-        .eq('status', 'pending')
-        .eq('tasks.household_id', householdMember.household_id)
-        .order('created_at', { ascending: false })
+      const householdIds = households.map(h => h.household_id)
+
+      // Fetch tasks pending review from user's households
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .select('id, title, description, emoji, completed_at, household_id, assignee_id, created_by')
+        .in('household_id', householdIds)
+        .eq('status', 'pending_review')
+        .order('completed_at', { ascending: false })
 
       if (error) throw error
 
-      // Filter out approvals for tasks submitted by the current user
-      const filteredApprovals = (data || []).filter(
-        approval => approval.submitted_by !== user.id
-      )
+      // Fetch user details separately to avoid foreign key issues
+      const userIds = new Set<string>()
+      tasks?.forEach((t: any) => {
+        if (t.assignee_id) userIds.add(t.assignee_id)
+        if (t.created_by) userIds.add(t.created_by)
+      })
 
-      setApprovals(filteredApprovals)
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, name, email, photo_url')
+        .in('id', Array.from(userIds))
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+
+      // Fetch household names
+      const { data: households } = await supabase
+        .from('households')
+        .select('id, name')
+        .in('id', householdIds)
+
+      const householdMap = new Map(households?.map(h => [h.id, h]) || [])
+
+      const formattedTasks = (tasks || []).map((t: any) => {
+        const assignee = profileMap.get(t.assignee_id)
+        const creator = profileMap.get(t.created_by)
+        const household = householdMap.get(t.household_id)
+
+        return {
+          id: t.id,
+          title: t.title,
+          description: t.description,
+          emoji: t.emoji,
+          completed_at: t.completed_at,
+          assignee_name: assignee?.name,
+          assignee_email: assignee?.email,
+          assignee_photo: assignee?.photo_url,
+          creator_name: creator?.name,
+          household_name: household?.name
+        }
+      })
+
+      setPendingTasks(formattedTasks)
     } catch (error) {
-      console.error('Error fetching approvals:', error)
+      console.error('Error fetching pending tasks:', error)
+      Alert.alert('Error', 'Failed to load pending reviews')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
-  const onRefresh = async () => {
-    setRefreshing(true)
-    await fetchApprovals()
-    setRefreshing(false)
-  }
-
-  const handleApprove = async (approvalId: string, taskId: string) => {
-    try {
-      // Update approval status
-      const { error: approvalError } = await supabase
-        .from('task_approvals')
-        .update({
-          status: 'approved',
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', approvalId)
-
-      if (approvalError) throw approvalError
-
-      // Update task status
-      const { error: taskError } = await supabase
-        .from('tasks')
-        .update({ status: 'completed' })
-        .eq('id', taskId)
-
-      if (taskError) throw taskError
-
-      Alert.alert('Success', 'Task approved successfully')
-      await fetchApprovals()
-    } catch (error) {
-      console.error('Error approving task:', error)
-      Alert.alert('Error', 'Failed to approve task')
-    }
-  }
-
-  const handleReject = async (approvalId: string, taskId: string) => {
+  const handleApprove = async (taskId: string) => {
     Alert.alert(
-      'Reject Task',
-      'Are you sure you want to reject this task completion?',
+      'Approve Task',
+      'Are you sure you want to approve this task as completed?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Reject',
-          style: 'destructive',
+          text: 'Approve',
           onPress: async () => {
             try {
-              // Update approval status
-              const { error: approvalError } = await supabase
-                .from('task_approvals')
-                .update({
-                  status: 'rejected',
-                  reviewed_by: user?.id,
-                  reviewed_at: new Date().toISOString(),
-                })
-                .eq('id', approvalId)
+              const notes = reviewNotes[taskId] || null
 
-              if (approvalError) throw approvalError
+              const { data, error } = await supabase.rpc('approve_task_review', {
+                p_task_id: taskId,
+                p_reviewer_id: user?.id,
+                p_review_notes: notes
+              })
 
-              // Update task status back to pending
-              const { error: taskError } = await supabase
-                .from('tasks')
-                .update({ status: 'pending' })
-                .eq('id', taskId)
+              if (error) throw error
 
-              if (taskError) throw taskError
-
-              Alert.alert('Task Rejected', 'Task has been rejected and marked as pending')
-              await fetchApprovals()
+              Alert.alert('Success', 'Task approved and marked as completed!')
+              setReviewNotes(prev => {
+                const newNotes = { ...prev }
+                delete newNotes[taskId]
+                return newNotes
+              })
+              await fetchPendingTasks()
             } catch (error) {
-              console.error('Error rejecting task:', error)
-              Alert.alert('Error', 'Failed to reject task')
+              console.error('Error approving task:', error)
+              Alert.alert('Error', 'Failed to approve task')
             }
-          },
-        },
+          }
+        }
       ]
     )
   }
 
-  const formatDate = (dateString: string) => {
+  const handleRequestChanges = async (taskId: string) => {
+    const notes = reviewNotes[taskId]
+
+    if (!notes || !notes.trim()) {
+      Alert.alert('Review Notes Required', 'Please add notes explaining what changes are needed.')
+      return
+    }
+
+    Alert.alert(
+      'Request Changes',
+      'This will move the task back to in progress with your review notes.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Request Changes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { data, error } = await supabase.rpc('request_task_changes', {
+                p_task_id: taskId,
+                p_reviewer_id: user?.id,
+                p_review_notes: notes.trim()
+              })
+
+              if (error) throw error
+
+              Alert.alert('Success', 'Changes requested. Task moved back to in progress.')
+              setReviewNotes(prev => {
+                const newNotes = { ...prev }
+                delete newNotes[taskId]
+                return newNotes
+              })
+              await fetchPendingTasks()
+            } catch (error) {
+              console.error('Error requesting changes:', error)
+              Alert.alert('Error', 'Failed to request changes')
+            }
+          }
+        }
+      ]
+    )
+  }
+
+
+  const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      hour: 'numeric',
+      minute: '2-digit'
     })
   }
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading approvals...</Text>
+        <ActivityIndicator size="large" color={APP_THEME.colors.primary} />
+        <Text style={styles.loadingText}>Loading pending reviews...</Text>
       </View>
     )
   }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        <View>
+          <Text style={styles.headerTitle}>Task Reviews</Text>
+          <Text style={styles.headerSubtitle}>
+            {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} pending review
+          </Text>
+        </View>
+        <TouchableOpacity onPress={fetchPendingTasks}>
+          <Ionicons name="refresh" size={24} color={APP_THEME.colors.surface} />
         </TouchableOpacity>
-        <Text style={styles.title}>Approval Requests</Text>
-        <View style={styles.placeholder} />
       </View>
 
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={fetchPendingTasks} />
         }
       >
-        {approvals.length > 0 ? (
-          <>
-            <View style={styles.infoSection}>
-              <Text style={styles.infoText}>
-                Review and approve task completions from your housemates
-              </Text>
-            </View>
-
-            {approvals.map((approval) => (
-              <View key={approval.id} style={styles.approvalCard}>
-                <View style={styles.approvalHeader}>
-                  <View style={styles.taskInfo}>
-                    <Text style={styles.taskTitle}>{approval.tasks?.title}</Text>
-                    {approval.tasks?.description && (
-                      <Text style={styles.taskDescription}>
-                        {approval.tasks.description}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={styles.submittedDate}>
-                    {formatDate(approval.created_at)}
-                  </Text>
-                </View>
-
-                <View style={styles.submissionInfo}>
-                  <Text style={styles.submittedBy}>
-                    Submitted by {approval.submitted_by_user?.name}
-                  </Text>
-                  
-                  {approval.proof_photo_url && (
-                    <TouchableOpacity
-                      style={styles.proofImageContainer}
-                      onPress={() => {
-                        // In a real app, you might want to open a full-screen image viewer
-                        Alert.alert('Proof Photo', 'Tap to view full size')
-                      }}
-                    >
-                      <Image
-                        source={{ uri: approval.proof_photo_url }}
-                        style={styles.proofImage}
-                        resizeMode="cover"
-                      />
-                      <Text style={styles.proofImageLabel}>Proof Photo</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {approval.comments && (
-                    <View style={styles.commentsSection}>
-                      <Text style={styles.commentsLabel}>Comments:</Text>
-                      <Text style={styles.commentsText}>{approval.comments}</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.approvalActions}>
-                  <TouchableOpacity
-                    style={styles.rejectButton}
-                    onPress={() => handleReject(approval.id, approval.tasks.id)}
-                  >
-                    <Text style={styles.rejectButtonText}>✗ Reject</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={styles.approveButton}
-                    onPress={() => handleApprove(approval.id, approval.tasks.id)}
-                  >
-                    <Text style={styles.approveButtonText}>✓ Approve</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </>
-        ) : (
+        {pendingTasks.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>✅</Text>
-            <Text style={styles.emptyStateTitle}>No Pending Approvals</Text>
-            <Text style={styles.emptyStateText}>
-              All task completions have been reviewed. New requests will appear here when housemates mark tasks as complete.
+            <Ionicons name="checkmark-done-circle" size={80} color={APP_THEME.colors.textSecondary} />
+            <Text style={styles.emptyTitle}>All Caught Up!</Text>
+            <Text style={styles.emptyText}>
+              No tasks are currently pending review.
             </Text>
-            
-            <TouchableOpacity
-              style={styles.viewTasksButton}
-              onPress={() => router.push('/(app)/tasks')}
-            >
-              <Text style={styles.viewTasksButtonText}>View All Tasks</Text>
-            </TouchableOpacity>
           </View>
+        ) : (
+          pendingTasks.map((task) => (
+            <View key={task.id} style={styles.taskCard}>
+              {/* Task Header */}
+              <TouchableOpacity
+                style={styles.taskHeader}
+                onPress={() => router.push(`/(app)/tasks/${task.id}`)}
+              >
+                {task.emoji && <Text style={styles.taskEmoji}>{task.emoji}</Text>}
+                <View style={styles.taskHeaderText}>
+                  <Text style={styles.taskTitle}>{task.title}</Text>
+                  <View style={styles.taskMetaRow}>
+                    {task.assignee_photo ? (
+                      <Image source={{ uri: task.assignee_photo }} style={styles.assigneeAvatar} />
+                    ) : (
+                      <View style={[styles.assigneeAvatar, styles.assigneeAvatarPlaceholder]}>
+                        <Text style={styles.assigneeAvatarText}>
+                          {(task.assignee_name || task.assignee_email || 'U')[0].toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    <Text style={styles.taskMeta}>
+                      {task.assignee_name || task.assignee_email || 'Unknown'} • {formatDateTime(task.completed_at)}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={APP_THEME.colors.textSecondary} />
+              </TouchableOpacity>
+
+              {/* Task Description */}
+              {task.description && (
+                <Text style={styles.taskDescription} numberOfLines={2}>
+                  {task.description}
+                </Text>
+              )}
+
+              {/* Review Notes Input */}
+              <TextInput
+                style={styles.notesInput}
+                placeholder="Add review notes (optional for approval, required for changes)..."
+                placeholderTextColor={APP_THEME.colors.textSecondary}
+                value={reviewNotes[task.id] || ''}
+                onChangeText={(text) => setReviewNotes(prev => ({ ...prev, [task.id]: text }))}
+                multiline
+                maxLength={500}
+              />
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.approveButton]}
+                  onPress={() => handleApprove(task.id)}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color={APP_THEME.colors.surface} />
+                  <Text style={styles.actionButtonText}>Approve</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.changesButton]}
+                  onPress={() => handleRequestChanges(task.id)}
+                >
+                  <Ionicons name="return-down-back" size={20} color={APP_THEME.colors.surface} />
+                  <Text style={styles.actionButtonText}>Request Changes</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))
         )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   )
@@ -281,16 +325,18 @@ export default function ApprovalRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: APP_THEME.colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: APP_THEME.colors.background,
   },
   loadingText: {
+    marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: APP_THEME.colors.textSecondary,
   },
   header: {
     flexDirection: 'row',
@@ -299,167 +345,134 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 20,
+    backgroundColor: APP_THEME.colors.primary,
   },
-  backText: {
-    fontSize: 16,
-    color: '#667eea',
-    fontWeight: '500',
-  },
-  title: {
-    fontSize: 18,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    color: APP_THEME.colors.surface,
   },
-  placeholder: {
-    width: 50,
+  headerSubtitle: {
+    fontSize: 14,
+    color: APP_THEME.colors.surface,
+    opacity: 0.9,
+    marginTop: 4,
   },
   content: {
     flex: 1,
-    padding: 20,
   },
-  infoSection: {
-    backgroundColor: '#f0f8ff',
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: APP_THEME.colors.text,
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: APP_THEME.colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  taskCard: {
+    backgroundColor: APP_THEME.colors.surface,
+    marginHorizontal: 20,
+    marginTop: 16,
     padding: 16,
     borderRadius: 12,
-    marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#667eea',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  infoText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  approvalCard: {
-    backgroundColor: '#fff3cd',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ffeaa7',
-  },
-  approvalHeader: {
+  taskHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  taskInfo: {
+  taskEmoji: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  taskHeaderText: {
     flex: 1,
-    marginRight: 10,
   },
   taskTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: APP_THEME.colors.text,
     marginBottom: 4,
+  },
+  taskMeta: {
+    fontSize: 12,
+    color: APP_THEME.colors.textSecondary,
   },
   taskDescription: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
+    color: APP_THEME.colors.text,
+    marginBottom: 12,
   },
-  submittedDate: {
-    fontSize: 12,
-    color: '#999',
-  },
-  submissionInfo: {
-    marginBottom: 16,
-  },
-  submittedBy: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  proofImageContainer: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  proofImage: {
-    width: '100%',
-    height: 150,
+  notesInput: {
+    backgroundColor: APP_THEME.colors.background,
     borderRadius: 8,
-    marginBottom: 4,
-  },
-  proofImageLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  commentsSection: {
-    marginTop: 8,
-  },
-  commentsLabel: {
+    padding: 12,
     fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: APP_THEME.colors.text,
+    marginBottom: 16,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
-  commentsText: {
-    fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
-    lineHeight: 20,
-  },
-  approvalActions: {
+  actionButtons: {
     flexDirection: 'row',
     gap: 12,
   },
-  rejectButton: {
+  actionButton: {
     flex: 1,
-    backgroundColor: '#dc3545',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
-  },
-  rejectButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    gap: 8,
   },
   approveButton: {
-    flex: 1,
-    backgroundColor: '#28a745',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    backgroundColor: APP_THEME.colors.success,
   },
-  approveButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  changesButton: {
+    backgroundColor: APP_THEME.colors.warning,
+  },
+  actionButtonText: {
+    color: APP_THEME.colors.surface,
+    fontSize: 14,
     fontWeight: '600',
   },
-  emptyState: {
+  taskMetaRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 60,
+    marginTop: 4,
   },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: 20,
+  assigneeAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
   },
-  emptyStateTitle: {
-    fontSize: 20,
+  assigneeAvatarPlaceholder: {
+    backgroundColor: APP_THEME.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  assigneeAvatarText: {
+    color: APP_THEME.colors.surface,
+    fontSize: 10,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 30,
-  },
-  viewTasksButton: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  viewTasksButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 })

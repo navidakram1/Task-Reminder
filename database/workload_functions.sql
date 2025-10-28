@@ -208,19 +208,19 @@ BEGIN
     PERFORM complete_task_workload(
       NEW.household_id,
       NEW.assignee_id,
-      COALESCE(NEW.effort_score, 1)
+      1  -- Default effort score since effort_score column doesn't exist yet
     );
   END IF;
-  
+
   -- When a task is assigned (status changes from null to something else)
   IF NEW.assignee_id IS NOT NULL AND OLD.assignee_id IS NULL THEN
     PERFORM increment_member_workload(
       NEW.household_id,
       NEW.assignee_id,
-      COALESCE(NEW.effort_score, 1)
+      1  -- Default effort score since effort_score column doesn't exist yet
     );
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

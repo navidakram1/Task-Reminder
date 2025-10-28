@@ -108,26 +108,26 @@ export default function CreateEditTaskScreen() {
         .select(`
           user_id,
           role,
-          users!inner (
+          profiles!inner (
             id,
+            name,
             email,
-            user_metadata
+            photo_url
           )
         `)
         .eq('household_id', householdId)
 
       if (error) throw error
 
-      // Transform the data to include name from user_metadata
+      // Transform the data to match expected format
       const transformedMembers = members?.map(member => ({
         user_id: member.user_id,
         role: member.role,
         profiles: {
-          id: member.users.id,
-          name: member.users.user_metadata?.name ||
-                member.users.user_metadata?.full_name ||
-                member.users.email?.split('@')[0] || 'Unknown',
-          email: member.users.email
+          id: member.profiles.id,
+          name: member.profiles.name || member.profiles.email?.split('@')[0] || 'Unknown',
+          email: member.profiles.email,
+          photo_url: member.profiles.photo_url
         }
       })) || []
 
@@ -135,7 +135,7 @@ export default function CreateEditTaskScreen() {
       setHouseholdMembers(transformedMembers)
     } catch (error) {
       console.error('Error fetching household members:', error)
-      // Fallback: try alternative query structure
+      // Fallback: Get members without profiles
       try {
         const { data: fallbackMembers } = await supabase
           .from('household_members')
@@ -143,23 +143,28 @@ export default function CreateEditTaskScreen() {
           .eq('household_id', householdId)
 
         if (fallbackMembers) {
-          const membersWithNames = await Promise.all(
+          // Get profile data separately
+          const membersWithProfiles = await Promise.all(
             fallbackMembers.map(async (member) => {
-              const { data: userData } = await supabase.auth.admin.getUserById(member.user_id)
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, name, email, photo_url')
+                .eq('id', member.user_id)
+                .single()
+
               return {
                 user_id: member.user_id,
                 role: member.role,
-                profiles: {
+                profiles: profile || {
                   id: member.user_id,
-                  name: userData.user?.user_metadata?.name ||
-                        userData.user?.user_metadata?.full_name ||
-                        userData.user?.email?.split('@')[0] || 'Unknown',
-                  email: userData.user?.email || ''
+                  name: 'Unknown User',
+                  email: '',
+                  photo_url: null
                 }
               }
             })
           )
-          setHouseholdMembers(membersWithNames)
+          setHouseholdMembers(membersWithProfiles)
         }
       } catch (fallbackError) {
         console.error('Fallback query also failed:', fallbackError)
@@ -211,8 +216,9 @@ export default function CreateEditTaskScreen() {
         due_date: dueDate || null,
         assignee_id: randomAssignment ? null : (assigneeId || null),
         recurrence: recurrence === 'none' ? null : recurrence,
-        emoji: selectedEmoji || null,
-        priority: priority,
+        // TEMPORARY: Commented out until Supabase schema cache refreshes (24-48 hours)
+        // emoji: selectedEmoji || null,
+        // priority: priority,
         household_id: selectedHouseholdId,
         created_by: user?.id,
       }

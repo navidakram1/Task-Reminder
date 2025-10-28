@@ -531,6 +531,15 @@ export default function TaskListScreen() {
 
             <TouchableOpacity
               style={styles.quickActionButton}
+              onPress={() => router.push('/(app)/approvals')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickActionIcon}>⭐</Text>
+              <Text style={styles.quickActionText}>Review</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionButton}
               onPress={() => {
                 const pendingTasks = filteredTasks.filter(t => t.status !== 'completed')
                 if (pendingTasks.length === 0) {

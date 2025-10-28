@@ -25,6 +25,7 @@ interface Comment {
   task_id: string
   user_id: string
   comment: string
+  is_anonymous?: boolean
   created_at: string
   user_name?: string
   user_email?: string
@@ -40,8 +41,10 @@ export default function TaskDetailsScreen() {
   const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState('')
   const [submittingComment, setSubmittingComment] = useState(false)
+  const [isAnonymous, setIsAnonymous] = useState(false)
   const [completionProofUri, setCompletionProofUri] = useState<string | null>(null)
   const [uploadingProof, setUploadingProof] = useState(false)
+  const [markingComplete, setMarkingComplete] = useState(false)
   const scrollViewRef = useRef<ScrollView>(null)
 
   useEffect(() => {
@@ -122,6 +125,7 @@ export default function TaskDetailsScreen() {
           task_id,
           user_id,
           comment,
+          is_anonymous,
           created_at
         `)
         .eq('task_id', id)
@@ -258,14 +262,19 @@ export default function TaskDetailsScreen() {
           .eq('id', task.id)
       }
 
-      Alert.alert('Success! 🎉', 'Task marked as done and moved to pending review!')
+      Alert.alert('Success! 🎉', 'Task completed successfully!')
       setCompletionProofUri(null)
       await fetchTaskDetails()
+
+      // Navigate back to tasks list after a short delay
+      setTimeout(() => {
+        router.back()
+      }, 1000)
     } catch (error: any) {
-      console.error('Error marking task done:', error)
+      console.error('Error completing task:', error)
       Alert.alert(
         'Error',
-        error.message || 'Failed to mark task as done. Please make sure the database migration has been run.'
+        error.message || 'Failed to complete task. Please make sure the database migration has been run.'
       )
     }
   }
@@ -282,12 +291,14 @@ export default function TaskDetailsScreen() {
           task_id: task.id,
           household_id: task.household_id,
           user_id: user?.id,
-          comment: newComment.trim()
+          comment: newComment.trim(),
+          is_anonymous: isAnonymous
         })
 
       if (error) throw error
 
       setNewComment('')
+      setIsAnonymous(false)
       await fetchComments()
 
       // Scroll to bottom to show new comment
@@ -417,8 +428,26 @@ export default function TaskDetailsScreen() {
               {task.emoji && <Text style={styles.emoji}>{task.emoji}</Text>}
               <Text style={styles.title}>{task.title}</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
-              <Text style={styles.statusText}>{getStatusText(task.status)}</Text>
+            <View style={styles.titleRightSection}>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(task.status) }]}>
+                <Text style={styles.statusText}>{getStatusText(task.status)}</Text>
+              </View>
+              {canMarkDone && (
+                <TouchableOpacity
+                  style={styles.quickCompleteButton}
+                  onPress={handleMarkDone}
+                  disabled={markingComplete}
+                >
+                  {markingComplete ? (
+                    <ActivityIndicator size="small" color={APP_THEME.colors.surface} />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color={APP_THEME.colors.surface} />
+                      <Text style={styles.quickCompleteText}>Complete</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -577,7 +606,11 @@ export default function TaskDetailsScreen() {
                 {comments.map((comment) => (
                   <View key={comment.id} style={styles.commentItem}>
                     <View style={styles.commentHeader}>
-                      {comment.user_photo ? (
+                      {comment.is_anonymous ? (
+                        <View style={[styles.commentAvatar, styles.avatarPlaceholder]}>
+                          <Ionicons name="person-outline" size={20} color={APP_THEME.colors.textSecondary} />
+                        </View>
+                      ) : comment.user_photo ? (
                         <Image source={{ uri: comment.user_photo }} style={styles.commentAvatar} />
                       ) : (
                         <View style={[styles.commentAvatar, styles.avatarPlaceholder]}>
@@ -588,7 +621,7 @@ export default function TaskDetailsScreen() {
                       )}
                       <View style={styles.commentMeta}>
                         <Text style={styles.commentAuthor}>
-                          {comment.user_name || comment.user_email || 'Unknown'}
+                          {comment.is_anonymous ? 'Anonymous' : (comment.user_name || comment.user_email || 'Unknown')}
                         </Text>
                         <Text style={styles.commentTime}>
                           {new Date(comment.created_at).toLocaleDateString('en-US', {
@@ -610,15 +643,30 @@ export default function TaskDetailsScreen() {
 
             {/* Add Comment Input */}
             <View style={styles.addCommentContainer}>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="Add a comment..."
-                placeholderTextColor={APP_THEME.colors.textSecondary}
-                value={newComment}
-                onChangeText={setNewComment}
-                multiline
-                maxLength={500}
-              />
+              <View style={styles.commentInputWrapper}>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Add a comment..."
+                  placeholderTextColor={APP_THEME.colors.textSecondary}
+                  value={newComment}
+                  onChangeText={setNewComment}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={styles.anonymousToggle}
+                  onPress={() => setIsAnonymous(!isAnonymous)}
+                >
+                  <Ionicons
+                    name={isAnonymous ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={isAnonymous ? APP_THEME.colors.primary : APP_THEME.colors.textSecondary}
+                  />
+                  <Text style={[styles.anonymousText, isAnonymous && styles.anonymousTextActive]}>
+                    Post anonymously
+                  </Text>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
                 style={[styles.sendButton, !newComment.trim() && styles.sendButtonDisabled]}
                 onPress={handleAddComment}
@@ -640,7 +688,7 @@ export default function TaskDetailsScreen() {
         {canMarkDone && !completionProofUri && (
           <TouchableOpacity style={styles.actionButton} onPress={handleMarkDone}>
             <Ionicons name="checkmark-circle" size={24} color={APP_THEME.colors.surface} />
-            <Text style={styles.actionButtonText}>Mark as Done</Text>
+            <Text style={styles.actionButtonText}>Mark Complete</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -708,12 +756,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   titleContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 12,
+  },
+  titleRightSection: {
+    gap: 8,
+    alignItems: 'flex-end',
   },
   emoji: {
     fontSize: 36,
@@ -941,8 +997,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: APP_THEME.colors.border,
   },
-  commentInput: {
+  commentInputWrapper: {
     flex: 1,
+    gap: 8,
+  },
+  commentInput: {
     backgroundColor: APP_THEME.colors.background,
     borderRadius: 20,
     paddingHorizontal: 16,
@@ -950,6 +1009,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: APP_THEME.colors.text,
     maxHeight: 100,
+  },
+  anonymousToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  anonymousText: {
+    fontSize: 13,
+    color: APP_THEME.colors.textSecondary,
+  },
+  anonymousTextActive: {
+    color: APP_THEME.colors.primary,
+    fontWeight: '600',
   },
   sendButton: {
     backgroundColor: APP_THEME.colors.primary,
@@ -961,6 +1034,25 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.5,
+  },
+  quickCompleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: APP_THEME.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickCompleteText: {
+    color: APP_THEME.colors.surface,
+    fontSize: 14,
+    fontWeight: '600',
   },
   actionButton: {
     position: 'absolute',

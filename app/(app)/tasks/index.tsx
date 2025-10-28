@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons'
+import * as ImagePicker from 'expo-image-picker'
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
@@ -12,8 +14,11 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import ReviewCountdown from '../../../components/tasks/ReviewCountdown'
+import { APP_THEME } from '../../../constants/AppTheme'
 import { useAuth } from '../../../contexts/AuthContext'
 import { supabase } from '../../../lib/supabase'
+import { triggerAutoApproval } from '../../../utils/autoApprovalHelper'
 
 type FilterType = 'all' | 'assigned' | 'pending' | 'completed'
 type TabType = 'all' | 'stats' | 'history'
@@ -31,10 +36,17 @@ export default function TaskListScreen() {
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationTask, setCelebrationTask] = useState<any>(null)
   const [userScore, setUserScore] = useState(0)
+  const [pendingReviewCount, setPendingReviewCount] = useState(0)
   const { user } = useAuth()
 
   useEffect(() => {
-    fetchTasks()
+    // Trigger auto-approval on mount, then fetch tasks
+    const initializeTasks = async () => {
+      await triggerAutoApproval()
+      await fetchTasks()
+      await fetchPendingReviewCount()
+    }
+    initializeTasks()
   }, [])
 
   useEffect(() => {
@@ -60,7 +72,7 @@ export default function TaskListScreen() {
       // Fetch tasks with simplified query to avoid foreign key issues
       const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id')
+        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id, pending_review_since, recurrence')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 
@@ -72,6 +84,34 @@ export default function TaskListScreen() {
       console.error('Error fetching tasks:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Fetch count of tasks pending review for badge display
+  const fetchPendingReviewCount = async () => {
+    if (!user) return
+
+    try {
+      // Get user's household
+      const { data: householdMember } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!householdMember) return
+
+      // Count tasks with pending_review status
+      const { count, error } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .eq('household_id', householdMember.household_id)
+        .eq('status', 'pending_review')
+
+      if (error) throw error
+      setPendingReviewCount(count || 0)
+    } catch (error) {
+      console.error('Error fetching pending review count:', error)
     }
   }
 
@@ -116,34 +156,11 @@ export default function TaskListScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true)
-    await fetchTasks()
+    // Trigger auto-approval of expired reviews first
+    await triggerAutoApproval()
+    // Then fetch updated tasks
+    await Promise.all([fetchTasks(), fetchPendingReviewCount()])
     setRefreshing(false)
-  }
-
-  const markAllComplete = async () => {
-    try {
-      const taskIds = filteredTasks
-        .filter(task => task.status !== 'completed')
-        .map(task => task.id)
-
-      if (taskIds.length === 0) {
-        Alert.alert('Info', 'All visible tasks are already completed!')
-        return
-      }
-
-      const { error } = await supabase
-        .from('tasks')
-        .update({ status: 'completed' })
-        .in('id', taskIds)
-
-      if (error) throw error
-
-      Alert.alert('Success', `Marked ${taskIds.length} tasks as completed!`)
-      await fetchTasks()
-    } catch (error) {
-      console.error('Error marking tasks complete:', error)
-      Alert.alert('Error', 'Failed to mark tasks as completed')
-    }
   }
 
   const markTaskComplete = async (taskId: string) => {
@@ -310,11 +327,82 @@ export default function TaskListScreen() {
   }
 
   const handleMarkComplete = async (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId)
+    if (!task) return
+
+    Alert.alert(
+      'Complete Task',
+      'Would you like to add a completion proof photo?',
+      [
+        {
+          text: 'Skip',
+          style: 'cancel',
+          onPress: () => confirmMarkComplete(taskId, null)
+        },
+        {
+          text: 'Add Photo',
+          onPress: () => pickImageForTask(taskId)
+        }
+      ]
+    )
+  }
+
+  const pickImageForTask = async (taskId: string) => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      })
+
+      if (!result.canceled && result.assets[0]) {
+        await confirmMarkComplete(taskId, result.assets[0].uri)
+      }
+    } catch (error) {
+      console.error('Error picking image:', error)
+      Alert.alert('Error', 'Failed to pick image')
+    }
+  }
+
+  const confirmMarkComplete = async (taskId: string, photoUri: string | null) => {
     try {
       const task = tasks.find(t => t.id === taskId)
+      let proofUrl = null
+
+      // Upload photo if provided
+      if (photoUri) {
+        const fileExt = photoUri.split('.').pop()
+        const fileName = `${taskId}-${Date.now()}.${fileExt}`
+        const filePath = `completion-proofs/${fileName}`
+
+        const response = await fetch(photoUri)
+        const blob = await response.blob()
+
+        const { error: uploadError } = await supabase.storage
+          .from('task-attachments')
+          .upload(filePath, blob, {
+            contentType: `image/${fileExt}`,
+            upsert: false
+          })
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('task-attachments')
+          .getPublicUrl(filePath)
+
+        proofUrl = publicUrl
+      }
+
+      // Mark task as complete
       const { error } = await supabase
         .from('tasks')
-        .update({ status: 'completed' })
+        .update({
+          status: 'completed',
+          completion_proof_url: proofUrl,
+          completed_at: new Date().toISOString()
+        })
         .eq('id', taskId)
 
       if (error) throw error
@@ -330,6 +418,7 @@ export default function TaskListScreen() {
       await fetchTasks()
     } catch (error) {
       console.error('Error marking task complete:', error)
+      Alert.alert('Error', 'Failed to complete task. Please try again.')
     }
   }
 
@@ -534,31 +623,17 @@ export default function TaskListScreen() {
               onPress={() => router.push('/(app)/approvals')}
               activeOpacity={0.8}
             >
-              <Text style={styles.quickActionIcon}>⭐</Text>
-              <Text style={styles.quickActionText}>Review</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => {
-                const pendingTasks = filteredTasks.filter(t => t.status !== 'completed')
-                if (pendingTasks.length === 0) {
-                  Alert.alert('Info', 'All visible tasks are already completed!')
-                  return
-                }
-                Alert.alert(
-                  'Complete All',
-                  `Mark ${pendingTasks.length} pending tasks as completed?`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Complete', onPress: () => markAllComplete() }
-                  ]
-                )
-              }}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.quickActionIcon}>✅</Text>
-              <Text style={styles.quickActionText}>Complete All</Text>
+              <View style={{ position: 'relative' }}>
+                <Text style={styles.quickActionIcon}>⭐</Text>
+                {pendingReviewCount > 0 && (
+                  <View style={styles.reviewBadge}>
+                    <Text style={styles.reviewBadgeText}>{pendingReviewCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.quickActionText}>
+                Review {pendingReviewCount > 0 ? `(${pendingReviewCount})` : ''}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -642,18 +717,28 @@ export default function TaskListScreen() {
                         )}
                       </View>
                     </View>
+
+                    {/* Auto-Approval Countdown for Pending Review */}
+                    {task.status === 'pending_review' && task.pending_review_since && (
+                      <View style={styles.countdownContainer}>
+                        <ReviewCountdown
+                          pendingReviewSince={task.pending_review_since}
+                          compact={false}
+                        />
+                      </View>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
 
               {/* Quick Complete Button */}
-              {task.status === 'pending' && task.assignee_id === user?.id && (
+              {(task.status === 'pending' || task.status === 'in_progress') && task.assignee_id === user?.id && (
                 <TouchableOpacity
                   style={styles.quickCompleteButton}
                   onPress={() => handleMarkComplete(task.id)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.quickCompleteIcon}>✓</Text>
+                  <Ionicons name="checkmark-circle" size={28} color={APP_THEME.colors.primary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1144,23 +1229,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     right: 12,
-    backgroundColor: '#10b981',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    backgroundColor: '#fff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
     zIndex: 2,
-  },
-  quickCompleteIcon: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    borderWidth: 2,
+    borderColor: APP_THEME.colors.primary,
   },
   // Enhanced Empty State Styles
   emptyState: {
@@ -1447,5 +1529,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94a3b8',
     fontWeight: '500',
+  },
+  // Review Badge Styles
+  reviewBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  reviewBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  // Countdown Container Styles
+  countdownContainer: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
 })

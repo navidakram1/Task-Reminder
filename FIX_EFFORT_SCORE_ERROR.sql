@@ -63,7 +63,8 @@ ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES auth.users(id),
 ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP WITH TIME ZONE,
 ADD COLUMN IF NOT EXISTS review_notes TEXT,
 ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE,
-ADD COLUMN IF NOT EXISTS completion_proof_url TEXT;
+ADD COLUMN IF NOT EXISTS completion_proof_url TEXT,
+ADD COLUMN IF NOT EXISTS pending_review_since TIMESTAMP WITH TIME ZONE;
 
 -- Update status constraint to include new statuses
 ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check;
@@ -80,9 +81,14 @@ CREATE TABLE IF NOT EXISTS task_comments (
   household_id UUID REFERENCES households(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   comment TEXT NOT NULL,
+  is_anonymous BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add is_anonymous column if table already exists
+ALTER TABLE task_comments
+ADD COLUMN IF NOT EXISTS is_anonymous BOOLEAN DEFAULT FALSE;
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id);
@@ -93,7 +99,46 @@ CREATE INDEX IF NOT EXISTS idx_task_comments_user_id ON task_comments(user_id);
 -- PART 4: Create mark_task_done function
 -- ============================================
 
+-- Mark task as done (directly to completed status)
 CREATE OR REPLACE FUNCTION mark_task_done(p_task_id UUID)
+RETURNS JSON AS $$
+DECLARE
+  v_task tasks%ROWTYPE;
+  v_result JSON;
+BEGIN
+  -- Get the task
+  SELECT * INTO v_task FROM tasks WHERE id = p_task_id;
+
+  IF NOT FOUND THEN
+    RETURN json_build_object('success', false, 'error', 'Task not found');
+  END IF;
+
+  -- Update task status to completed (no review required)
+  UPDATE tasks
+  SET
+    status = 'completed',
+    completed_at = NOW(),
+    updated_at = NOW()
+  WHERE id = p_task_id;
+
+  -- Return success
+  RETURN json_build_object(
+    'success', true,
+    'task_id', p_task_id,
+    'status', 'completed'
+  );
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RETURN json_build_object(
+      'success', false,
+      'error', SQLERRM
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Mark task for review (optional workflow)
+CREATE OR REPLACE FUNCTION mark_task_for_review(p_task_id UUID)
 RETURNS JSON AS $$
 DECLARE
   v_task tasks%ROWTYPE;
@@ -307,6 +352,117 @@ GRANT SELECT ON task_comments_with_users TO authenticated;
 -- Check if functions exist
 -- SELECT proname FROM pg_proc WHERE proname IN ('mark_task_done', 'approve_task_review', 'request_task_changes');
 
+-- ============================================
+-- PART 8: Auto-Approval System (3-Day Expiration)
+-- ============================================
+
+-- Function to auto-approve tasks after 3 days in pending_review
+CREATE OR REPLACE FUNCTION auto_approve_expired_reviews()
+RETURNS INTEGER AS $$
+DECLARE
+  v_count INTEGER := 0;
+BEGIN
+  -- Update tasks that have been in pending_review for more than 3 days
+  UPDATE tasks
+  SET
+    status = 'completed',
+    reviewed_at = NOW(),
+    review_notes = 'Auto-approved after 3 days'
+  WHERE
+    status = 'pending_review'
+    AND pending_review_since IS NOT NULL
+    AND pending_review_since <= NOW() - INTERVAL '3 days'
+  RETURNING id INTO v_count;
+
+  -- Get the count of updated tasks
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  RETURN v_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to set pending_review_since when task enters pending_review status
+CREATE OR REPLACE FUNCTION set_pending_review_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- When task status changes to pending_review, set the timestamp
+  IF NEW.status = 'pending_review' AND (OLD.status IS NULL OR OLD.status != 'pending_review') THEN
+    NEW.pending_review_since = NOW();
+  END IF;
+
+  -- When task status changes from pending_review to something else, clear the timestamp
+  IF OLD.status = 'pending_review' AND NEW.status != 'pending_review' THEN
+    NEW.pending_review_since = NULL;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger for pending_review timestamp
+DROP TRIGGER IF EXISTS set_pending_review_timestamp_trigger ON tasks;
+CREATE TRIGGER set_pending_review_timestamp_trigger
+  BEFORE UPDATE ON tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION set_pending_review_timestamp();
+
+-- Also handle INSERT case (when task is created directly in pending_review)
+CREATE OR REPLACE FUNCTION set_pending_review_timestamp_on_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'pending_review' THEN
+    NEW.pending_review_since = NOW();
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_pending_review_timestamp_insert_trigger ON tasks;
+CREATE TRIGGER set_pending_review_timestamp_insert_trigger
+  BEFORE INSERT ON tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION set_pending_review_timestamp_on_insert();
+
+-- ============================================
+-- PART 9: Scheduled Auto-Approval (Optional)
+-- ============================================
+-- NOTE: This requires pg_cron extension which may not be available on all Supabase plans
+-- If pg_cron is available, uncomment the following:
+
+-- Enable pg_cron extension (run as superuser or in Supabase dashboard)
+-- CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Schedule auto-approval to run every hour
+-- SELECT cron.schedule(
+--   'auto-approve-expired-reviews',
+--   '0 * * * *',  -- Every hour at minute 0
+--   $$SELECT auto_approve_expired_reviews();$$
+-- );
+
+-- Alternative: Call auto_approve_expired_reviews() manually or from your app
+-- You can also call this function from a Supabase Edge Function on a schedule
+
+-- ============================================
+-- PART 10: Helper Views for Auto-Approval
+-- ============================================
+
+-- View to see tasks pending review with time remaining
+CREATE OR REPLACE VIEW tasks_pending_review_with_countdown AS
+SELECT
+  t.id,
+  t.title,
+  t.household_id,
+  t.assignee_id,
+  t.pending_review_since,
+  EXTRACT(EPOCH FROM (t.pending_review_since + INTERVAL '3 days' - NOW())) AS seconds_until_auto_approval,
+  CASE
+    WHEN t.pending_review_since + INTERVAL '3 days' <= NOW() THEN 'EXPIRED'
+    ELSE 'PENDING'
+  END AS review_status
+FROM tasks t
+WHERE t.status = 'pending_review'
+  AND t.pending_review_since IS NOT NULL;
+
 -- Check if task_comments table exists
 -- SELECT * FROM information_schema.tables WHERE table_name = 'task_comments';
 
@@ -320,6 +476,7 @@ GRANT SELECT ON task_comments_with_users TO authenticated;
 -- 1. Reload your Expo app (press 'r')
 -- 2. Try marking a task as done
 -- 3. Try adding a comment
--- 4. Everything should work!
+-- 4. Auto-approval will work automatically!
+-- 5. Call auto_approve_expired_reviews() manually or set up a cron job
 -- ============================================
 

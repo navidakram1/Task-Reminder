@@ -270,13 +270,15 @@ GRANT EXECUTE ON FUNCTION request_task_changes TO authenticated;
 CREATE OR REPLACE VIEW tasks_pending_review AS
 SELECT
   t.*,
-  assignee.name as assignee_name,
-  assignee.email as assignee_email,
-  creator.name as creator_name,
+  assignee_profile.name as assignee_name,
+  assignee_user.email as assignee_email,
+  creator_profile.name as creator_name,
   h.name as household_name
 FROM tasks t
-LEFT JOIN auth.users assignee ON t.assignee_id = assignee.id
-LEFT JOIN auth.users creator ON t.created_by = creator.id
+LEFT JOIN auth.users assignee_user ON t.assignee_id = assignee_user.id
+LEFT JOIN profiles assignee_profile ON t.assignee_id = assignee_profile.id
+LEFT JOIN auth.users creator_user ON t.created_by = creator_user.id
+LEFT JOIN profiles creator_profile ON t.created_by = creator_profile.id
 LEFT JOIN households h ON t.household_id = h.id
 WHERE t.status = 'pending_review';
 

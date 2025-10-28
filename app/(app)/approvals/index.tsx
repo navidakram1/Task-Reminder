@@ -82,12 +82,12 @@ export default function ApprovalsScreen() {
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
 
       // Fetch household names
-      const { data: households } = await supabase
+      const { data: householdData } = await supabase
         .from('households')
         .select('id, name')
         .in('id', householdIds)
 
-      const householdMap = new Map(households?.map(h => [h.id, h]) || [])
+      const householdMap = new Map(householdData?.map(h => [h.id, h]) || [])
 
       const formattedTasks = (tasks || []).map((t: any) => {
         const assignee = profileMap.get(t.assignee_id)

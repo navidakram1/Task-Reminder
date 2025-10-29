@@ -35,9 +35,15 @@ export default function TaskListScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('all')
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebrationTask, setCelebrationTask] = useState<any>(null)
-  const [userScore, setUserScore] = useState(0)
   const [pendingReviewCount, setPendingReviewCount] = useState(0)
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'me'>('all')
+  const [historySortBy, setHistorySortBy] = useState<'date' | 'title'>('date')
   const { user } = useAuth()
+
+  // Calculate user score from actual completed tasks (persistent)
+  const userScore = tasks.filter(t =>
+    t.assignee_id === user?.id && t.status === 'completed'
+  ).length * 10
 
   useEffect(() => {
     // Trigger auto-approval on mount, then fetch tasks
@@ -69,17 +75,50 @@ export default function TaskListScreen() {
         return
       }
 
-      // Fetch tasks with simplified query to avoid foreign key issues
-      const { data, error } = await supabase
+      // Fetch tasks - simplified query to avoid PostgREST cache issues
+      const { data: tasksData, error } = await supabase
         .from('tasks')
-        .select('id, title, description, due_date, status, assignee_id, emoji, created_at, household_id, pending_review_since, recurrence')
+        .select('*')
         .eq('household_id', householdMember.household_id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      console.log('Fetched tasks:', data?.length || 0)
-      console.log('Sample task:', data?.[0])
-      setTasks(data || [])
+
+      // Fetch assignee profiles separately to avoid cache issues
+      const tasksWithProfiles = await Promise.all(
+        (tasksData || []).map(async (task) => {
+          let assignee = null
+          let creator = null
+
+          if (task.assignee_id) {
+            const { data: assigneeData } = await supabase
+              .from('profiles')
+              .select('id, display_name, username, avatar_url')
+              .eq('id', task.assignee_id)
+              .single()
+            assignee = assigneeData
+          }
+
+          if (task.created_by) {
+            const { data: creatorData } = await supabase
+              .from('profiles')
+              .select('id, display_name, username')
+              .eq('id', task.created_by)
+              .single()
+            creator = creatorData
+          }
+
+          return {
+            ...task,
+            assignee,
+            creator
+          }
+        })
+      )
+
+      console.log('Fetched tasks:', tasksWithProfiles?.length || 0)
+      console.log('Sample task:', tasksWithProfiles?.[0])
+      setTasks(tasksWithProfiles || [])
     } catch (error) {
       console.error('Error fetching tasks:', error)
     } finally {
@@ -412,9 +451,7 @@ export default function TaskListScreen() {
       setShowCelebration(true)
       setTimeout(() => setShowCelebration(false), 3000)
 
-      // Update score
-      setUserScore(prev => prev + 10)
-
+      // Refresh tasks to update score (calculated from completed tasks)
       await fetchTasks()
     } catch (error) {
       console.error('Error marking task complete:', error)
@@ -536,66 +573,93 @@ export default function TaskListScreen() {
         >
           <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>History</Text>
         </TouchableOpacity>
-      </View>
 
-      {/* Modern Search & Filter Bar */}
-      <View style={styles.searchFilterContainer}>
-        <View style={styles.searchInputContainer}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search tasks..."
-            placeholderTextColor="#94a3b8"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              style={styles.clearSearchButton}
-              onPress={() => setSearchQuery('')}
-            >
-              <Text style={styles.clearSearchText}>✕</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Modern Filter Chips */}
-      <View style={styles.filterSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterContainer}
+        {/* Action Buttons beside History tab */}
+        <TouchableOpacity
+          style={styles.tabActionButton}
+          onPress={() => router.push('/(app)/tasks/random-assignment')}
+          activeOpacity={0.8}
         >
-          {[
-            { key: 'all', label: 'All', icon: '📋', count: tasks.length },
-            { key: 'pending', label: 'To Do', icon: '⏳', count: tasks.filter(t => t.status === 'pending' || !t.status).length },
-            { key: 'assigned', label: 'Mine', icon: '👤', count: tasks.filter(t => t.assignee_id === user?.id).length },
-            { key: 'completed', label: 'Done', icon: '✅', count: tasks.filter(t => t.status === 'completed').length }
-          ].map((filterOption) => (
-            <TouchableOpacity
-              key={filterOption.key}
-              style={[
-                styles.filterChip,
-                filter === filterOption.key && styles.activeFilterChip
-              ]}
-              onPress={() => setFilter(filterOption.key as FilterType)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.filterIcon}>{filterOption.icon}</Text>
-              <Text style={[
-                styles.filterLabel,
-                filter === filterOption.key && styles.activeFilterLabel
-              ]}>
-                {filterOption.label}
-              </Text>
-              <View style={[
-                styles.filterBadge,
-                filter === filterOption.key && styles.activeFilterBadge
-              ]}>
+          <Text style={styles.tabActionIcon}>🎲</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.tabActionButton}
+          onPress={() => router.push('/(app)/approvals')}
+          activeOpacity={0.8}
+        >
+          <View style={{ position: 'relative' }}>
+            <Text style={styles.tabActionIcon}>⭐</Text>
+            {pendingReviewCount > 0 && (
+              <View style={styles.tabActionBadge}>
+                <Text style={styles.tabActionBadgeText}>{pendingReviewCount}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Modern Search & Filter Bar - Only show on "All Tasks" tab */}
+      {activeTab === 'all' && (
+        <View style={styles.searchFilterContainer}>
+          <View style={styles.searchInputContainer}>
+            <Text style={styles.searchIcon}>🔍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search tasks..."
+              placeholderTextColor="#94a3b8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                style={styles.clearSearchButton}
+                onPress={() => setSearchQuery('')}
+              >
+                <Text style={styles.clearSearchText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Modern Filter Chips - Only show on "All Tasks" tab */}
+      {activeTab === 'all' && (
+        <View style={styles.filterSection}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContainer}
+          >
+            {[
+              { key: 'all', label: 'All', icon: '📋', count: tasks.length },
+              { key: 'pending', label: 'To Do', icon: '⏳', count: tasks.filter(t => t.status === 'pending' || !t.status).length },
+              { key: 'assigned', label: 'Mine', icon: '👤', count: tasks.filter(t => t.assignee_id === user?.id).length },
+              { key: 'completed', label: 'Done', icon: '✅', count: tasks.filter(t => t.status === 'completed').length }
+            ].map((filterOption) => (
+              <TouchableOpacity
+                key={filterOption.key}
+                style={[
+                  styles.filterChip,
+                  filter === filterOption.key && styles.activeFilterChip
+                ]}
+                onPress={() => setFilter(filterOption.key as FilterType)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.filterIcon}>{filterOption.icon}</Text>
                 <Text style={[
-                  styles.filterBadgeText,
-                  filter === filterOption.key && styles.activeFilterBadgeText
+                  styles.filterLabel,
+                  filter === filterOption.key && styles.activeFilterLabel
+                ]}>
+                  {filterOption.label}
+                </Text>
+                <View style={[
+                  styles.filterBadge,
+                  filter === filterOption.key && styles.activeFilterBadge
+                ]}>
+                  <Text style={[
+                    styles.filterBadgeText,
+                    filter === filterOption.key && styles.activeFilterBadgeText
                 ]}>
                   {filterOption.count}
                 </Text>
@@ -604,39 +668,6 @@ export default function TaskListScreen() {
           ))}
         </ScrollView>
       </View>
-
-      {/* Quick Actions */}
-      {filteredTasks.length > 0 && (
-        <View style={styles.quickActionsSection}>
-          <View style={styles.quickActionsContainer}>
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => router.push('/(app)/tasks/random-assignment')}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.quickActionIcon}>🎲</Text>
-              <Text style={styles.quickActionText}>Shuffle Tasks</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionButton}
-              onPress={() => router.push('/(app)/approvals')}
-              activeOpacity={0.8}
-            >
-              <View style={{ position: 'relative' }}>
-                <Text style={styles.quickActionIcon}>⭐</Text>
-                {pendingReviewCount > 0 && (
-                  <View style={styles.reviewBadge}>
-                    <Text style={styles.reviewBadgeText}>{pendingReviewCount}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.quickActionText}>
-                Review {pendingReviewCount > 0 ? `(${pendingReviewCount})` : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       )}
 
       <ScrollView
@@ -645,7 +676,7 @@ export default function TaskListScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {activeTab === 'all' && filteredTasks.length > 0 ? (
+        {activeTab === 'all' && filteredTasks.length > 0 && (
           filteredTasks.map((task, index) => (
             <View
               key={task.id}
@@ -743,107 +774,355 @@ export default function TaskListScreen() {
               )}
             </View>
           ))
-        ) : (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyStateContent}>
-              <Text style={styles.emptyStateIcon}>
-                {getEmptyStateIcon(filter)}
-              </Text>
-              <Text style={styles.emptyStateTitle}>
-                {getEmptyStateTitle(filter)}
-              </Text>
-              <Text style={styles.emptyStateText}>
-                {getEmptyStateMessage(filter)}
-              </Text>
-              {filter === 'all' && (
-                <TouchableOpacity
-                  style={styles.createTaskButton}
-                  onPress={() => router.push('/(app)/tasks/create')}
-                >
-                  <View style={styles.createTaskButtonContent}>
-                    <Text style={styles.createTaskButtonIcon}>✨</Text>
-                    <Text style={styles.createTaskButtonText}>Create Your First Task</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              {filter !== 'all' && (
-                <TouchableOpacity
-                  style={styles.viewAllTasksButton}
-                  onPress={() => setFilter('all')}
-                >
-                  <Text style={styles.viewAllTasksButtonText}>View All Tasks</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
         )}
 
         {activeTab === 'stats' && (
-          <View style={styles.statsContainer}>
+          <ScrollView style={styles.statsContainer} showsVerticalScrollIndicator={false}>
             {(() => {
               const stats = calculateUserStats()
+              const completionPercentage = stats.assignedToMe > 0
+                ? (stats.completedByMe / stats.assignedToMe) * 100
+                : 0
+
               return (
                 <>
-                  <View style={styles.statsGrid}>
-                    <View style={styles.statCard}>
-                      <Text style={styles.statIcon}>✅</Text>
-                      <Text style={styles.statValue}>{stats.completed}</Text>
-                      <Text style={styles.statLabel}>Completed</Text>
+                  {/* Score Hero Card */}
+                  <View style={styles.scoreHeroCard}>
+                    <View style={styles.scoreHeroContent}>
+                      <Text style={styles.scoreHeroLabel}>Your Total Score</Text>
+                      <Text style={styles.scoreHeroValue}>{userScore}</Text>
+                      <Text style={styles.scoreHeroSubtitle}>
+                        🎉 {stats.completedByMe} tasks completed
+                      </Text>
                     </View>
-                    <View style={styles.statCard}>
-                      <Text style={styles.statIcon}>⏳</Text>
-                      <Text style={styles.statValue}>{stats.pending}</Text>
-                      <Text style={styles.statLabel}>Pending</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                      <Text style={styles.statIcon}>👤</Text>
-                      <Text style={styles.statValue}>{stats.assignedToMe}</Text>
-                      <Text style={styles.statLabel}>Assigned to Me</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                      <Text style={styles.statIcon}>🎯</Text>
-                      <Text style={styles.statValue}>{stats.completionRate}%</Text>
-                      <Text style={styles.statLabel}>Completion Rate</Text>
+                    <View style={styles.scoreHeroBadge}>
+                      <Text style={styles.scoreHeroBadgeText}>⭐</Text>
                     </View>
                   </View>
-                  <View style={styles.scoreCard}>
-                    <Text style={styles.scoreCardTitle}>Your Score</Text>
-                    <Text style={styles.scoreCardValue}>{userScore}</Text>
-                    <Text style={styles.scoreCardSubtitle}>Keep completing tasks to earn more points!</Text>
+
+                  {/* Progress Ring */}
+                  <View style={styles.progressCard}>
+                    <Text style={styles.progressCardTitle}>Completion Progress</Text>
+                    <View style={styles.progressRingContainer}>
+                      <View style={styles.progressRing}>
+                        <Text style={styles.progressPercentage}>{Math.round(completionPercentage)}%</Text>
+                        <Text style={styles.progressLabel}>Complete</Text>
+                      </View>
+                    </View>
+                    <View style={styles.progressStats}>
+                      <View style={styles.progressStatItem}>
+                        <Text style={styles.progressStatValue}>{stats.completedByMe}</Text>
+                        <Text style={styles.progressStatLabel}>Done</Text>
+                      </View>
+                      <View style={styles.progressStatDivider} />
+                      <View style={styles.progressStatItem}>
+                        <Text style={styles.progressStatValue}>{stats.assignedToMe - stats.completedByMe}</Text>
+                        <Text style={styles.progressStatLabel}>Remaining</Text>
+                      </View>
+                      <View style={styles.progressStatDivider} />
+                      <View style={styles.progressStatItem}>
+                        <Text style={styles.progressStatValue}>{stats.assignedToMe}</Text>
+                        <Text style={styles.progressStatLabel}>Total</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Stats Grid */}
+                  <View style={styles.statsGrid}>
+                    <View style={[styles.modernStatCard, { backgroundColor: '#FF6B6B15' }]}>
+                      <View style={[styles.statIconCircle, { backgroundColor: '#FF6B6B' }]}>
+                        <Text style={styles.statIconText}>✅</Text>
+                      </View>
+                      <Text style={[styles.modernStatValue, { color: '#FF6B6B' }]}>{stats.completed}</Text>
+                      <Text style={styles.modernStatLabel}>Completed</Text>
+                      <View style={[styles.statProgressBar, { backgroundColor: '#FF6B6B20' }]}>
+                        <View style={[styles.statProgressFill, {
+                          width: `${tasks.length > 0 ? (stats.completed / tasks.length) * 100 : 0}%`,
+                          backgroundColor: '#FF6B6B'
+                        }]} />
+                      </View>
+                    </View>
+
+                    <View style={[styles.modernStatCard, { backgroundColor: '#4ECDC415' }]}>
+                      <View style={[styles.statIconCircle, { backgroundColor: '#4ECDC4' }]}>
+                        <Text style={styles.statIconText}>⏳</Text>
+                      </View>
+                      <Text style={[styles.modernStatValue, { color: '#4ECDC4' }]}>{stats.pending}</Text>
+                      <Text style={styles.modernStatLabel}>Pending</Text>
+                      <View style={[styles.statProgressBar, { backgroundColor: '#4ECDC420' }]}>
+                        <View style={[styles.statProgressFill, {
+                          width: `${tasks.length > 0 ? (stats.pending / tasks.length) * 100 : 0}%`,
+                          backgroundColor: '#4ECDC4'
+                        }]} />
+                      </View>
+                    </View>
+
+                    <View style={[styles.modernStatCard, { backgroundColor: '#667eea15' }]}>
+                      <View style={[styles.statIconCircle, { backgroundColor: '#667eea' }]}>
+                        <Text style={styles.statIconText}>👤</Text>
+                      </View>
+                      <Text style={[styles.modernStatValue, { color: '#667eea' }]}>{stats.assignedToMe}</Text>
+                      <Text style={styles.modernStatLabel}>My Tasks</Text>
+                      <View style={[styles.statProgressBar, { backgroundColor: '#667eea20' }]}>
+                        <View style={[styles.statProgressFill, {
+                          width: `${tasks.length > 0 ? (stats.assignedToMe / tasks.length) * 100 : 0}%`,
+                          backgroundColor: '#667eea'
+                        }]} />
+                      </View>
+                    </View>
+
+                    <View style={[styles.modernStatCard, { backgroundColor: '#f093fb15' }]}>
+                      <View style={[styles.statIconCircle, { backgroundColor: '#f093fb' }]}>
+                        <Text style={styles.statIconText}>🎯</Text>
+                      </View>
+                      <Text style={[styles.modernStatValue, { color: '#f093fb' }]}>{stats.completionRate}%</Text>
+                      <Text style={styles.modernStatLabel}>Success Rate</Text>
+                      <View style={[styles.statProgressBar, { backgroundColor: '#f093fb20' }]}>
+                        <View style={[styles.statProgressFill, {
+                          width: `${stats.completionRate}%`,
+                          backgroundColor: '#f093fb'
+                        }]} />
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Achievement Badges */}
+                  <View style={styles.achievementsCard}>
+                    <Text style={styles.achievementsTitle}>🏆 Achievements</Text>
+                    <View style={styles.achievementsList}>
+                      {stats.completedByMe >= 1 && (
+                        <View style={styles.achievementBadge}>
+                          <Text style={styles.achievementIcon}>🌟</Text>
+                          <Text style={styles.achievementName}>First Task</Text>
+                        </View>
+                      )}
+                      {stats.completedByMe >= 5 && (
+                        <View style={styles.achievementBadge}>
+                          <Text style={styles.achievementIcon}>🔥</Text>
+                          <Text style={styles.achievementName}>On Fire</Text>
+                        </View>
+                      )}
+                      {stats.completedByMe >= 10 && (
+                        <View style={styles.achievementBadge}>
+                          <Text style={styles.achievementIcon}>💪</Text>
+                          <Text style={styles.achievementName}>Power User</Text>
+                        </View>
+                      )}
+                      {stats.completionRate === 100 && stats.assignedToMe > 0 && (
+                        <View style={styles.achievementBadge}>
+                          <Text style={styles.achievementIcon}>👑</Text>
+                          <Text style={styles.achievementName}>Perfect</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </>
               )
             })()}
-          </View>
+          </ScrollView>
         )}
 
         {activeTab === 'history' && (
-          <View style={styles.historyContainer}>
-            {tasks.filter(t => t.status === 'completed').length > 0 ? (
-              tasks
-                .filter(t => t.status === 'completed')
-                .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
-                .map((task, index) => (
-                  <View key={task.id} style={[styles.historyCard, { marginBottom: index === tasks.filter(t => t.status === 'completed').length - 1 ? 20 : 12 }]}>
-                    <View style={styles.historyCardContent}>
-                      <Text style={styles.historyCardIcon}>✅</Text>
-                      <View style={styles.historyCardText}>
-                        <Text style={styles.historyCardTitle}>{task.title}</Text>
-                        <Text style={styles.historyCardDate}>
-                          Completed on {new Date(task.updated_at || task.created_at).toLocaleDateString()}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                ))
-            ) : (
-              <View style={styles.emptyHistory}>
-                <Text style={styles.emptyHistoryIcon}>📋</Text>
-                <Text style={styles.emptyHistoryTitle}>No completed tasks yet</Text>
-                <Text style={styles.emptyHistoryText}>Complete some tasks to see them here</Text>
-              </View>
-            )}
-          </View>
+          <ScrollView style={styles.historyContainer} showsVerticalScrollIndicator={false}>
+            {/* Modern Filter Chips */}
+            <View style={styles.modernFilters}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChipsScroll}>
+                <TouchableOpacity
+                  style={[styles.historyFilterChip, historyFilter === 'all' && styles.historyFilterChipActive]}
+                  onPress={() => setHistoryFilter('all')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.historyFilterChipText, historyFilter === 'all' && styles.historyFilterChipTextActive]}>
+                    🌐 All Tasks
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.historyFilterChip, historyFilter === 'me' && styles.historyFilterChipActive]}
+                  onPress={() => setHistoryFilter('me')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.historyFilterChipText, historyFilter === 'me' && styles.historyFilterChipTextActive]}>
+                    👤 My Tasks
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.historyFilterChip, historySortBy === 'date' && styles.historyFilterChipActive]}
+                  onPress={() => setHistorySortBy('date')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.historyFilterChipText, historySortBy === 'date' && styles.historyFilterChipTextActive]}>
+                    📅 By Date
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.historyFilterChip, historySortBy === 'title' && styles.historyFilterChipActive]}
+                  onPress={() => setHistorySortBy('title')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.historyFilterChipText, historySortBy === 'title' && styles.historyFilterChipTextActive]}>
+                    🔤 By Title
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+
+            {(() => {
+              // Filter completed tasks
+              let completedTasks = tasks.filter(t => t.status === 'completed')
+
+              // Apply history filter
+              if (historyFilter === 'me') {
+                completedTasks = completedTasks.filter(t => t.assignee_id === user?.id)
+              }
+
+              // Apply sorting
+              if (historySortBy === 'date') {
+                completedTasks.sort((a, b) => {
+                  const dateA = new Date(a.completed_at || a.updated_at || a.created_at).getTime()
+                  const dateB = new Date(b.completed_at || b.updated_at || b.created_at).getTime()
+                  return dateB - dateA
+                })
+              } else {
+                completedTasks.sort((a, b) => a.title.localeCompare(b.title))
+              }
+
+              // Group by date sections
+              const groupTasksByDate = (tasks: any[]) => {
+                const now = new Date()
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+                const yesterday = new Date(today)
+                yesterday.setDate(yesterday.getDate() - 1)
+                const weekAgo = new Date(today)
+                weekAgo.setDate(weekAgo.getDate() - 7)
+
+                const groups: { [key: string]: any[] } = {
+                  'Today': [],
+                  'Yesterday': [],
+                  'This Week': [],
+                  'Earlier': []
+                }
+
+                tasks.forEach(task => {
+                  const taskDate = new Date(task.completed_at || task.updated_at || task.created_at)
+                  const taskDay = new Date(taskDate.getFullYear(), taskDate.getMonth(), taskDate.getDate())
+
+                  if (taskDay.getTime() === today.getTime()) {
+                    groups['Today'].push(task)
+                  } else if (taskDay.getTime() === yesterday.getTime()) {
+                    groups['Yesterday'].push(task)
+                  } else if (taskDay.getTime() >= weekAgo.getTime()) {
+                    groups['This Week'].push(task)
+                  } else {
+                    groups['Earlier'].push(task)
+                  }
+                })
+
+                return groups
+              }
+
+              const groupedTasks = historySortBy === 'date' ? groupTasksByDate(completedTasks) : null
+
+              return (
+                <View style={styles.timelineContainer}>
+                  {historySortBy === 'date' && groupedTasks ? (
+                    // Timeline view grouped by date
+                    Object.entries(groupedTasks).map(([section, sectionTasks]) =>
+                      sectionTasks.length > 0 ? (
+                        <View key={section} style={styles.timelineSection}>
+                          <View style={styles.timelineSectionHeader}>
+                            <View style={styles.timelineDot} />
+                            <Text style={styles.timelineSectionTitle}>{section}</Text>
+                            <View style={styles.timelineLine} />
+                          </View>
+                          {sectionTasks.map((task, index) => (
+                            <TouchableOpacity
+                              key={task.id}
+                              style={styles.timelineCard}
+                              onPress={() => handleTaskPress(task.id)}
+                              activeOpacity={0.7}
+                            >
+                              <View style={styles.timelineCardLeft}>
+                                <View style={styles.timelineMarker} />
+                                {index < sectionTasks.length - 1 && <View style={styles.timelineConnector} />}
+                              </View>
+                              <View style={styles.timelineCardContent}>
+                                <View style={styles.timelineCardHeader}>
+                                  <View style={styles.timelineCardIconBadge}>
+                                    <Text style={styles.timelineCardEmoji}>{task.emoji || '✅'}</Text>
+                                  </View>
+                                  <View style={styles.timelineCardInfo}>
+                                    <Text style={styles.timelineCardTitle}>{task.title}</Text>
+                                    <View style={styles.timelineCardMeta}>
+                                      <Text style={styles.timelineCardTime}>
+                                        🕐 {new Date(task.completed_at || task.updated_at || task.created_at).toLocaleTimeString('en-US', {
+                                          hour: 'numeric',
+                                          minute: '2-digit'
+                                        })}
+                                      </Text>
+                                      {task.assignee && (
+                                        <View style={styles.timelineCardAssignee}>
+                                          <Text style={styles.timelineCardAssigneeText}>
+                                            {task.assignee.display_name || task.assignee.username || 'Unknown'}
+                                          </Text>
+                                        </View>
+                                      )}
+                                    </View>
+                                  </View>
+                                  <View style={styles.timelineCardPoints}>
+                                    <Text style={styles.timelineCardPointsValue}>+10</Text>
+                                    <Text style={styles.timelineCardPointsLabel}>pts</Text>
+                                  </View>
+                                </View>
+                                {task.description && (
+                                  <Text style={styles.timelineCardDescription} numberOfLines={2}>
+                                    {task.description}
+                                  </Text>
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null
+                    )
+                  ) : (
+                    // List view (sorted by title)
+                    completedTasks.map((task, index) => (
+                      <TouchableOpacity
+                        key={task.id}
+                        style={styles.modernHistoryCard}
+                        onPress={() => handleTaskPress(task.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.modernHistoryCardIcon}>
+                          <Text style={styles.modernHistoryCardEmoji}>{task.emoji || '✅'}</Text>
+                        </View>
+                        <View style={styles.modernHistoryCardContent}>
+                          <Text style={styles.modernHistoryCardTitle}>{task.title}</Text>
+                          <View style={styles.modernHistoryCardMeta}>
+                            <Text style={styles.modernHistoryCardDate}>
+                              {new Date(task.completed_at || task.updated_at || task.created_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </Text>
+                            {task.assignee && (
+                              <Text style={styles.modernHistoryCardAssignee}>
+                                • {task.assignee.display_name || task.assignee.username}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.modernHistoryCardBadge}>
+                          <Text style={styles.modernHistoryCardBadgeText}>+10</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </View>
+              )
+            })()}
+          </ScrollView>
         )}
       </ScrollView>
 
@@ -1009,57 +1288,69 @@ const styles = StyleSheet.create({
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    gap: 12,
+    gap: 14,
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    gap: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(102, 126, 234, 0.15)',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    gap: 10,
+    minWidth: 90,
+    justifyContent: 'center',
   },
   activeFilterChip: {
     backgroundColor: '#667eea',
     borderColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+    transform: [{ scale: 1.05 }],
   },
   filterIcon: {
-    fontSize: 16,
+    fontSize: 18,
   },
   filterLabel: {
     fontSize: 14,
     color: '#64748b',
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   activeFilterLabel: {
     color: '#fff',
+    fontWeight: '800',
   },
   filterBadge: {
-    backgroundColor: '#f1f5f9',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    minWidth: 20,
+    backgroundColor: 'rgba(102, 126, 234, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    minWidth: 26,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   activeFilterBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   filterBadgeText: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '700',
+    fontSize: 13,
+    color: '#667eea',
+    fontWeight: '800',
   },
   activeFilterBadgeText: {
     color: '#fff',
+    fontWeight: '900',
   },
   // Quick Actions Styles
   quickActionsSection: {
@@ -1068,6 +1359,8 @@ const styles = StyleSheet.create({
   },
   quickActionsContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
   },
   quickActionButton: {
@@ -1078,7 +1371,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
@@ -1323,6 +1616,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     paddingHorizontal: 20,
+    alignItems: 'center',
   },
   tab: {
     flex: 1,
@@ -1341,6 +1635,37 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#667eea',
+  },
+  // Tab Action Button Styles
+  tabActionButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabActionIcon: {
+    fontSize: 20,
+  },
+  tabActionBadge: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  tabActionBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   // Celebration Styles
   celebrationOverlay: {
@@ -1406,80 +1731,417 @@ const styles = StyleSheet.create({
   },
   // Stats Styles
   statsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    flex: 1,
+    backgroundColor: '#f8fafc',
   },
-  statsGrid: {
+  scoreHeroCard: {
+    backgroundColor: '#FF6B6B',
+    borderRadius: 24,
+    padding: 28,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 16,
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  statCard: {
-    width: '48%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  scoreCard: {
-    backgroundColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#667eea',
+    shadowColor: '#FF6B6B',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
   },
-  scoreCardTitle: {
+  scoreHeroContent: {
+    flex: 1,
+  },
+  scoreHeroLabel: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '600',
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
-  scoreCardValue: {
-    fontSize: 48,
-    fontWeight: '800',
+  scoreHeroValue: {
+    fontSize: 56,
+    fontWeight: '900',
     color: '#fff',
-    marginBottom: 8,
+    marginBottom: 4,
+    letterSpacing: -2,
   },
-  scoreCardSubtitle: {
-    fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+  scoreHeroSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
     fontWeight: '500',
+  },
+  scoreHeroBadge: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreHeroBadgeText: {
+    fontSize: 36,
+  },
+  progressCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  progressCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  progressRingContainer: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  progressRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 12,
+    borderColor: '#4ECDC4',
+    backgroundColor: '#4ECDC410',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPercentage: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#4ECDC4',
+    letterSpacing: -1,
+  },
+  progressLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  progressStatItem: {
+    alignItems: 'center',
+  },
+  progressStatValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  progressStatLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  progressStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e2e8f0',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 16,
+  },
+  modernStatCard: {
+    width: '48%',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  statIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  statIconText: {
+    fontSize: 24,
+  },
+  modernStatValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    marginBottom: 4,
+    letterSpacing: -1,
+  },
+  modernStatLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  statProgressBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  statProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  achievementsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 24,
+    marginHorizontal: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  achievementsTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 16,
+  },
+  achievementsList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  achievementBadge: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: '#4ECDC4',
+  },
+  achievementLocked: {
+    borderColor: '#e2e8f0',
+    opacity: 0.5,
+  },
+  achievementIcon: {
+    fontSize: 20,
+  },
+  achievementName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1e293b',
   },
   // History Styles
   historyContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    flex: 1,
+    backgroundColor: '#f8fafc',
   },
-  historyCard: {
+  modernFilters: {
+    paddingVertical: 16,
+    paddingLeft: 20,
+  },
+  filterChipsScroll: {
+    flexGrow: 0,
+  },
+  historyFilterChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(78, 205, 196, 0.15)',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  historyFilterChipActive: {
+    backgroundColor: '#4ECDC4',
+    borderColor: '#4ECDC4',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+    transform: [{ scale: 1.05 }],
+  },
+  historyFilterChipText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748b',
+    letterSpacing: 0.3,
+  },
+  historyFilterChipTextActive: {
+    color: '#fff',
+    fontWeight: '800',
+  },
+  timelineContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  timelineSection: {
+    marginBottom: 24,
+  },
+  timelineSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FF6B6B',
+    marginRight: 12,
+  },
+  timelineSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginRight: 12,
+  },
+  timelineLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#e2e8f0',
+  },
+  timelineCard: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  timelineCardLeft: {
+    width: 40,
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  timelineMarker: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#4ECDC4',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  timelineConnector: {
+    flex: 1,
+    width: 2,
+    backgroundColor: '#e2e8f0',
+    marginTop: 4,
+  },
+  timelineCardContent: {
+    flex: 1,
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  timelineCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  timelineCardIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  timelineCardEmoji: {
+    fontSize: 24,
+  },
+  timelineCardInfo: {
+    flex: 1,
+  },
+  timelineCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  timelineCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timelineCardTime: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  timelineCardAssignee: {
+    backgroundColor: '#667eea15',
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  timelineCardAssigneeText: {
+    fontSize: 11,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  timelineCardPoints: {
+    backgroundColor: '#FF6B6B15',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    alignItems: 'center',
+  },
+  timelineCardPointsValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FF6B6B',
+    lineHeight: 18,
+  },
+  timelineCardPointsLabel: {
+    fontSize: 9,
+    color: '#FF6B6B',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  timelineCardDescription: {
+    fontSize: 13,
+    color: '#64748b',
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  modernHistoryCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1488,47 +2150,75 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  historyCardContent: {
-    flexDirection: 'row',
+  modernHistoryCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8fafc',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  modernHistoryCardEmoji: {
+    fontSize: 26,
+  },
+  modernHistoryCardContent: {
     flex: 1,
   },
-  historyCardIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  historyCardText: {
-    flex: 1,
-  },
-  historyCardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  modernHistoryCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1e293b',
     marginBottom: 4,
   },
-  historyCardDate: {
+  modernHistoryCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modernHistoryCardDate: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748b',
     fontWeight: '500',
+  },
+  modernHistoryCardAssignee: {
+    fontSize: 12,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  modernHistoryCardBadge: {
+    backgroundColor: '#4ECDC415',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  modernHistoryCardBadgeText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#4ECDC4',
   },
   emptyHistory: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 40,
   },
   emptyHistoryIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: 72,
+    marginBottom: 20,
   },
   emptyHistoryTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptyHistoryText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#94a3b8',
     fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   // Review Badge Styles
   reviewBadge: {

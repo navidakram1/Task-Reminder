@@ -364,9 +364,18 @@ export default function TaskDetailsScreen() {
     )
   }
 
-  const isAssignee = task.assignee_id === user?.id
+  const isAssignee = task.assigned_to === user?.id
   const isCreator = task.created_by === user?.id
   const canMarkDone = (isAssignee || isCreator) && (task.status === 'pending' || task.status === 'in_progress')
+
+  console.log('Mark Complete Button Debug:', {
+    assigned_to: task.assigned_to,
+    user_id: user?.id,
+    isAssignee,
+    isCreator,
+    status: task.status,
+    canMarkDone
+  })
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -768,6 +777,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titleRightSection: {
+    flexDirection: 'column',
     gap: 8,
     alignItems: 'flex-end',
   },

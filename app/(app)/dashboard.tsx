@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { APP_THEME } from '../../constants/AppTheme'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
@@ -42,6 +43,7 @@ interface Household {
   is_default: boolean
   is_active: boolean
   type: string
+  avatar_url?: string
 }
 
 // Helper functions
@@ -84,6 +86,7 @@ export default function DashboardScreen() {
   const [showHouseholdModal, setShowHouseholdModal] = useState(false)
   const [switchingHousehold, setSwitchingHousehold] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -91,7 +94,80 @@ export default function DashboardScreen() {
     fetchUserHouseholds()
     fetchUserProfile()
     fetchUserScore()
+    fetchUnreadMessageCount()
+    subscribeToMessages()
   }, [])
+
+  const fetchUnreadMessageCount = async () => {
+    try {
+      if (!user?.id) {
+        console.warn('User ID not available for fetching unread messages')
+        return
+      }
+
+      const { data: currentHousehold, error: householdError } = await supabase
+        .from('household_members')
+        .select('household_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single()
+
+      if (householdError) {
+        console.warn('Could not fetch active household:', householdError.message)
+        return
+      }
+
+      if (currentHousehold?.household_id) {
+        const { data, error } = await supabase
+          .rpc('get_unread_message_count', {
+            p_household_id: currentHousehold.household_id
+          })
+
+        if (error) {
+          console.warn('Could not fetch unread message count:', error.message)
+          return
+        }
+
+        setUnreadMessageCount(data || 0)
+      }
+    } catch (error: any) {
+      console.warn('Error fetching unread messages:', error?.message || error)
+    }
+  }
+
+  const subscribeToMessages = () => {
+    try {
+      const subscription = supabase
+        .channel('messages-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'household_messages',
+          },
+          () => {
+            try {
+              fetchUnreadMessageCount()
+            } catch (error: any) {
+              console.warn('Error in message subscription callback:', error?.message || error)
+            }
+          }
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            console.log('Subscribed to message updates')
+          }
+        })
+
+      return () => {
+        subscription.unsubscribe()
+      }
+    } catch (error: any) {
+      console.warn('Error subscribing to messages:', error?.message || error)
+      return () => {}
+    }
+  }
 
   const calculateScoreLevel = (score: number) => {
     if (score < 100) return { level: 'Beginner', emoji: '🌱' }
@@ -102,19 +178,31 @@ export default function DashboardScreen() {
   }
 
   const fetchUserScore = async () => {
-    if (!user) return
+    if (!user?.id) {
+      console.warn('User ID not available for fetching score')
+      return
+    }
+
     try {
       // Calculate score based on completed tasks and bills
-      const { data: completedTasks } = await supabase
+      const { data: completedTasks, error: tasksError } = await supabase
         .from('tasks')
         .select('id', { count: 'exact', head: true })
         .eq('created_by', user.id)
         .eq('status', 'completed')
 
-      const { data: createdBills } = await supabase
+      if (tasksError) {
+        console.warn('Error fetching completed tasks:', tasksError.message)
+      }
+
+      const { data: createdBills, error: billsError } = await supabase
         .from('bills')
         .select('id', { count: 'exact', head: true })
         .eq('paid_by', user.id)
+
+      if (billsError) {
+        console.warn('Error fetching created bills:', billsError.message)
+      }
 
       const completedCount = completedTasks?.length || 0
       const billsCount = createdBills?.length || 0
@@ -136,8 +224,8 @@ export default function DashboardScreen() {
         scoreLevel: levelInfo.level,
         scoreProgress: Math.min(progress, 100)
       }))
-    } catch (error) {
-      console.error('Error fetching user score:', error)
+    } catch (error: any) {
+      console.warn('Error fetching user score:', error?.message || error)
     }
   }
 
@@ -174,7 +262,8 @@ export default function DashboardScreen() {
             id,
             name,
             invite_code,
-            type
+            type,
+            avatar_url
           )
         `)
         .eq('user_id', user.id)
@@ -198,7 +287,8 @@ export default function DashboardScreen() {
             member_count: count || 0,
             is_default: false, // Will be updated below
             is_active: data.household?.id === hm.household_id,
-            joined_at: hm.joined_at
+            joined_at: hm.joined_at,
+            avatar_url: hm.households.avatar_url
           }
         })
       )
@@ -217,29 +307,44 @@ export default function DashboardScreen() {
 
     setSwitchingHousehold(true)
     try {
-      // Update the current data to use the new household
-      setData(prev => ({
-        ...prev,
-        household: {
-          id: household.id,
-          name: household.name,
-          invite_code: household.invite_code
-        }
-      }))
+      // Call the database function to switch active household
+      const { data, error } = await supabase.rpc('switch_active_household', {
+        p_user_id: user?.id,
+        p_household_id: household.id
+      })
 
-      // Update households state
-      setHouseholds(prev => prev.map(h => ({
-        ...h,
-        is_active: h.id === household.id
-      })))
+      if (error) throw error
 
-      setShowHouseholdModal(false)
+      if (data) {
+        // Update households state to reflect new active household
+        setHouseholds(prev => prev.map(h => ({
+          ...h,
+          is_active: h.id === household.id
+        })))
 
-      // Refresh dashboard data for new household
-      await fetchDashboardData()
+        // Update the current data to use the new household
+        setData(prev => ({
+          ...prev,
+          household: {
+            id: household.id,
+            name: household.name,
+            invite_code: household.invite_code
+          }
+        }))
 
-      Alert.alert('Success', `Switched to ${household.name}`)
+        setShowHouseholdModal(false)
+
+        // Refresh all dashboard data for new household
+        await fetchDashboardData()
+        await fetchUserHouseholds()
+        await fetchUnreadMessageCount()
+
+        Alert.alert('Success', `Switched to ${household.name}`)
+      } else {
+        Alert.alert('Error', 'Failed to switch household')
+      }
     } catch (error: any) {
+      console.error('Error switching household:', error)
       Alert.alert('Error', error.message || 'Failed to switch household')
     } finally {
       setSwitchingHousehold(false)
@@ -331,26 +436,26 @@ export default function DashboardScreen() {
         .limit(10)
 
       if (tasksError) {
-        console.error('Error fetching tasks:', tasksError)
+        console.warn('Error fetching tasks:', tasksError.message)
       }
 
       // Fetch pending transfer requests (gracefully handle if function doesn't exist)
-      let transferRequests = []
+      let transferRequests: any[] = []
       try {
         const { data, error } = await supabase.rpc('get_pending_transfer_requests')
         if (error) {
-          console.error('Error fetching transfer requests:', error)
+          console.warn('Error fetching transfer requests:', error.message)
           transferRequests = []
         } else {
           transferRequests = data || []
         }
-      } catch (error) {
-        console.error('Transfer requests function not available:', error)
+      } catch (error: any) {
+        console.warn('Transfer requests function not available:', error?.message || error)
         transferRequests = []
       }
 
       // Fetch recent bills (gracefully handle if table doesn't exist)
-      let bills = []
+      let bills: any[] = []
       try {
         const { data, error } = await supabase
           .from('bills')
@@ -360,13 +465,13 @@ export default function DashboardScreen() {
           .limit(5)
 
         if (error) {
-          console.error('Error fetching bills:', error)
+          console.warn('Error fetching bills:', error.message)
           bills = []
         } else {
           bills = data || []
         }
-      } catch (error) {
-        console.error('Bills table not available:', error)
+      } catch (error: any) {
+        console.warn('Bills table not available:', error?.message || error)
         bills = []
       }
 
@@ -423,12 +528,12 @@ export default function DashboardScreen() {
           avgTasksPerWeek,
           householdEfficiency: efficiency,
         }
-      } catch (error) {
-        console.error('Error fetching analytics:', error)
+      } catch (error: any) {
+        console.warn('Error fetching analytics:', error?.message || error)
       }
 
       // Fetch activity feed
-      let activityFeed = []
+      let activityFeed: any[] = []
       try {
         // Get recent activities (tasks created, completed, bills added)
         const { data: recentActivities } = await supabase
@@ -454,20 +559,12 @@ export default function DashboardScreen() {
           timestamp: activity.updated_at,
           user: activity.profiles?.name || activity.profiles?.email?.split('@')[0] || 'Someone',
         })) || []
-      } catch (error) {
-        console.error('Error fetching activity feed:', error)
+      } catch (error: any) {
+        console.warn('Error fetching activity feed:', error?.message || error)
       }
 
-      console.log('About to setData with:', {
-        upcomingTasks: tasks?.length || 0,
-        pendingTransfers: transferRequests?.length || 0,
-        recentBills: bills?.length || 0,
-        household: householdData?.name || 'No household',
-        analytics,
-        activityFeed: activityFeed.length
-      })
-
-      setData({
+      setData(prev => ({
+        ...prev,
         upcomingTasks: tasks || [],
         pendingTransfers: transferRequests || [],
         recentBills: bills || [],
@@ -477,16 +574,9 @@ export default function DashboardScreen() {
         },
         analytics,
         activityFeed,
-      })
-
-      console.log('setData completed successfully')
+      }))
     } catch (error: any) {
-      console.error('Error fetching dashboard data:', error)
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      })
+      console.warn('Error fetching dashboard data:', error?.message || error)
     } finally {
       setLoading(false)
     }
@@ -568,7 +658,7 @@ export default function DashboardScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ScrollView
         style={styles.scrollContainer}
         refreshControl={
@@ -576,23 +666,37 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Modern Header with Gradient */}
+        {/* Modern Header with Gradient - Edge to Edge */}
         <View style={styles.headerGradient}>
           <View style={styles.header}>
-            <View style={styles.headerTop}>
-              <View style={styles.greetingContainer}>
-                <Text style={styles.greetingText}>
-                  {getGreeting()}, {getUserDisplayName()}
-                </Text>
-                <Text style={styles.dateText}>
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'short',
-                    month: 'short',
-                    day: 'numeric'
-                  })}
-                </Text>
+            {/* Logo & Branding Row */}
+            <View style={styles.logoRow}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logoBadge}>
+                  <Text style={styles.logoEmoji}>🏠</Text>
+                </View>
+                <View style={styles.logoTextContainer}>
+                  <Text style={styles.logoText}>SplitDuty</Text>
+                  <Text style={styles.logoSubtext}>Household Manager</Text>
+                </View>
               </View>
               <View style={styles.headerRightContainer}>
+                {/* Messages Icon */}
+                <TouchableOpacity
+                  style={styles.messageButton}
+                  onPress={() => router.push('/(app)/messages')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.messageButtonEmoji}>💬</Text>
+                  {unreadMessageCount > 0 && (
+                    <View style={styles.messageBadge}>
+                      <Text style={styles.messageBadgeText}>
+                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
                 {/* Score Badge */}
                 <TouchableOpacity
                   style={styles.scoreBadge}
@@ -622,6 +726,27 @@ export default function DashboardScreen() {
                     </View>
                   )}
                 </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Greeting Row */}
+            <View style={styles.greetingRow}>
+              <View style={styles.greetingContainer}>
+                <Text style={styles.greetingEmoji}>
+                  {getGreeting() === 'Good morning' ? '☀️' : getGreeting() === 'Good afternoon' ? '🌤️' : '🌙'}
+                </Text>
+                <View>
+                  <Text style={styles.greetingText}>
+                    {getGreeting()}, {getUserDisplayName().split(' ')[0]}!
+                  </Text>
+                  <Text style={styles.dateText}>
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -823,12 +948,20 @@ export default function DashboardScreen() {
 
       </ScrollView>
 
-      {/* Floating Action Button */}
+      {/* Floating Messaging Bubble */}
       <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/(app)/tasks/create')}
+        style={styles.messagingBubble}
+        onPress={() => router.push('/(app)/messages')}
+        activeOpacity={0.8}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <Text style={styles.messagingBubbleIcon}>💬</Text>
+        {unreadMessageCount > 0 && (
+          <View style={styles.messagingBubbleBadge}>
+            <Text style={styles.messagingBubbleBadgeText}>
+              {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* Household Switcher Modal */}
@@ -838,7 +971,7 @@ export default function DashboardScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowHouseholdModal(false)}
       >
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Switch Household</Text>
             <TouchableOpacity onPress={() => setShowHouseholdModal(false)}>
@@ -856,9 +989,22 @@ export default function DashboardScreen() {
                 ]}
                 onPress={() => switchHousehold(household)}
               >
-                <Text style={styles.modalHouseholdIcon}>
-                  {household.type === 'group' ? '👥' : '🏠'}
-                </Text>
+                {/* Household Avatar */}
+                <View style={styles.modalHouseholdAvatar}>
+                  {household.avatar_url ? (
+                    <Image
+                      source={{ uri: household.avatar_url }}
+                      style={styles.modalHouseholdAvatarImage}
+                    />
+                  ) : (
+                    <View style={styles.modalHouseholdAvatarPlaceholder}>
+                      <Text style={styles.modalHouseholdAvatarIcon}>
+                        {household.type === 'group' ? '👥' : '🏠'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
                 <View style={styles.modalHouseholdInfo}>
                   <Text style={styles.modalHouseholdName}>{household.name}</Text>
                   <Text style={styles.modalHouseholdMeta}>
@@ -866,7 +1012,9 @@ export default function DashboardScreen() {
                   </Text>
                 </View>
                 {household.is_active && (
-                  <Text style={styles.modalActiveIndicator}>✓</Text>
+                  <View style={styles.modalActiveIndicatorContainer}>
+                    <Text style={styles.modalActiveIndicator}>✓</Text>
+                  </View>
                 )}
               </TouchableOpacity>
             ))}
@@ -882,9 +1030,9 @@ export default function DashboardScreen() {
               <Text style={styles.modalAddText}>Create or Join Household</Text>
             </TouchableOpacity>
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
-    </View>
+    </SafeAreaView>
   )
 }
 
@@ -939,10 +1087,9 @@ const styles = StyleSheet.create({
 
   // Header Styles
   header: {
-    backgroundColor: APP_THEME.colors.surface,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingHorizontal: APP_THEME.spacing.lg,
-    paddingBottom: APP_THEME.spacing.lg,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   headerTop: {
     flexDirection: 'row',
@@ -951,15 +1098,15 @@ const styles = StyleSheet.create({
     marginBottom: APP_THEME.spacing.lg,
   },
   greetingText: {
-    fontSize: APP_THEME.typography.fontSize.xxxl,
-    fontWeight: APP_THEME.typography.fontWeight.bold,
-    color: APP_THEME.colors.textPrimary,
-    marginBottom: APP_THEME.spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 2,
   },
   dateText: {
-    fontSize: APP_THEME.typography.fontSize.base,
-    color: APP_THEME.colors.textSecondary,
-    fontWeight: APP_THEME.typography.fontWeight.medium,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   profileButton: {
     width: 40,
@@ -1397,7 +1544,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8faff',
   },
   modalHeaderGradient: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     backgroundColor: '#667eea',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -1476,6 +1622,25 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 24,
     paddingHorizontal: 20,
+  },
+  modalClose: {
+    fontSize: 18,
+    color: '#666',
+    padding: 4,
+  },
+  modalHouseholdItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#f8f9fa',
+  },
+  modalHouseholdItemActive: {
+    backgroundColor: '#e3f2fd',
+    borderWidth: 2,
+    borderColor: '#FF6B6B',
   },
   // Cool Household Cards
   coolHouseholdCard: {
@@ -1799,40 +1964,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
   },
-  floatingActionButton: {
-    position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 100 : 85,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#667eea',
-    shadowColor: '#667eea',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  fabGradient: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#667eea',
-  },
-  fabIcon: {
-    fontSize: 28,
-    color: '#ffffff',
-    fontWeight: 'bold',
-    lineHeight: 28,
-  },
+
   // Work Showcase Styles
   workShowcaseContainer: {
     gap: 16,
@@ -2028,7 +2160,48 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Floating Action Button
+  // Floating Messaging Bubble
+  messagingBubble: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    right: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
+    zIndex: 1000,
+  },
+  messagingBubbleIcon: {
+    fontSize: 32,
+    color: '#fff',
+  },
+  messagingBubbleBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  messagingBubbleBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // Floating Action Button (kept for reference)
   fab: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 100 : 80,
@@ -2051,47 +2224,29 @@ const styles = StyleSheet.create({
     fontWeight: '300',
   },
 
-  // Modal Styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  modalClose: {
-    fontSize: 18,
-    color: '#666',
-    padding: 4,
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  modalHouseholdItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+  // Modal Household Styles
+  modalHouseholdAvatar: {
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#f8f9fa',
+    marginRight: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
   },
-  modalHouseholdItemActive: {
-    backgroundColor: '#e3f2fd',
-    borderWidth: 1,
-    borderColor: '#007AFF',
+  modalHouseholdAvatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  modalHouseholdAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B',
+  },
+  modalHouseholdAvatarIcon: {
+    fontSize: 24,
   },
   modalHouseholdIcon: {
     fontSize: 20,
@@ -2110,10 +2265,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  modalActiveIndicatorContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   modalActiveIndicator: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   modalAddHousehold: {
     flexDirection: 'row',
@@ -2143,8 +2307,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B6B',
     paddingBottom: 20,
   },
-  greetingContainer: {
+  logoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     flex: 1,
+  },
+  logoBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  logoEmoji: {
+    fontSize: 28,
+  },
+  logoTextContainer: {
+    flex: 1,
+  },
+  logoText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  logoSubtext: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  greetingRow: {
+    marginBottom: 12,
+  },
+  greetingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  greetingEmoji: {
+    fontSize: 28,
   },
   profilePlaceholder: {
     width: 40,
@@ -2170,6 +2382,35 @@ const styles = StyleSheet.create({
   },
   statusTextContainer: {
     flex: 1,
+  },
+
+  // Message Button Styles
+  messageButton: {
+    position: 'relative',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  messageButtonEmoji: {
+    fontSize: 24,
+  },
+  messageBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  messageBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
   // Quick Action Cards with Colors

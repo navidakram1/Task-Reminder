@@ -2,6 +2,7 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import {
     Alert,
+    Image,
     Modal,
     ScrollView,
     StyleSheet,
@@ -9,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native'
-import { router } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -22,6 +23,7 @@ interface Household {
   member_count: number
   is_active: boolean
   joined_at: string
+  avatar_url?: string
 }
 
 interface HouseholdSwitcherProps {
@@ -129,7 +131,7 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
         presentationStyle="pageSheet"
         onRequestClose={() => setShowModal(false)}
       >
-        <View style={styles.modalContainer}>
+        <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={() => setShowModal(false)}>
               <Text style={styles.closeButton}>✕</Text>
@@ -155,9 +157,22 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
                 disabled={switching}
               >
                 <View style={styles.householdLeft}>
-                  <Text style={styles.householdIcon}>
-                    {getHouseholdIcon(household.household_type)}
-                  </Text>
+                  {/* Household Avatar */}
+                  <View style={styles.householdAvatar}>
+                    {household.avatar_url ? (
+                      <Image
+                        source={{ uri: household.avatar_url }}
+                        style={styles.householdAvatarImage}
+                      />
+                    ) : (
+                      <View style={styles.householdAvatarPlaceholder}>
+                        <Text style={styles.householdAvatarIcon}>
+                          {getHouseholdIcon(household.household_type)}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
                   <View style={styles.householdInfo}>
                     <Text style={[
                       styles.householdName,
@@ -171,12 +186,14 @@ export default function HouseholdSwitcher({ currentHousehold, onHouseholdChange 
                   </View>
                 </View>
                 {household.is_active && (
-                  <Text style={styles.activeIndicator}>✓</Text>
+                  <View style={styles.activeIndicatorContainer}>
+                    <Text style={styles.activeIndicator}>✓</Text>
+                  </View>
                 )}
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
+        </SafeAreaView>
       </Modal>
     </>
   )
@@ -273,6 +290,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  householdAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    marginRight: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  householdAvatarImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  householdAvatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FF6B6B',
+  },
+  householdAvatarIcon: {
+    fontSize: 24,
+  },
   householdIcon: {
     fontSize: 24,
     marginRight: 12,
@@ -293,10 +333,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#64748b',
   },
+  activeIndicatorContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FF6B6B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
   activeIndicator: {
-    fontSize: 20,
-    color: '#667eea',
-    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 })
           })

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
     ActivityIndicator,
     Animated,
+    Dimensions,
     FlatList,
     Image,
     KeyboardAvoidingView,
@@ -16,6 +17,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
+
+const { width } = Dimensions.get('window')
 
 interface Message {
   id: string
@@ -59,6 +62,9 @@ export default function MessagesScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current
   const tabFadeAnim = useRef(new Animated.Value(1)).current
   const sendScaleAnim = useRef(new Animated.Value(1)).current
+  const messageItemAnimations = useRef<{ [key: string]: Animated.Value }>({}).current
+  const inputFocusAnim = useRef(new Animated.Value(0)).current
+  const headerScaleAnim = useRef(new Animated.Value(1)).current
 
   // Animate screen on mount
   useEffect(() => {
@@ -325,35 +331,63 @@ export default function MessagesScreen() {
     }
   }
 
-  const renderMessage = (item: Message) => (
-    <View key={item.id} style={styles.messageItem}>
-      <View style={styles.messageAvatar}>
-        {item.user_photo ? (
-          <Image source={{ uri: item.user_photo }} style={styles.avatarImage} />
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {item.user_name?.charAt(0).toUpperCase() || '👤'}
+  const renderMessage = (item: Message) => {
+    // Create animation for each message if it doesn't exist
+    if (!messageItemAnimations[item.id]) {
+      messageItemAnimations[item.id] = new Animated.Value(0)
+      Animated.timing(messageItemAnimations[item.id], {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start()
+    }
+
+    const messageAnim = messageItemAnimations[item.id]
+    const opacity = messageAnim
+    const translateX = messageAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [-50, 0],
+    })
+
+    return (
+      <Animated.View
+        key={item.id}
+        style={[
+          styles.messageItem,
+          {
+            opacity,
+            transform: [{ translateX }],
+          },
+        ]}
+      >
+        <View style={styles.messageAvatar}>
+          {item.user_photo ? (
+            <Image source={{ uri: item.user_photo }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {item.user_name?.charAt(0).toUpperCase() || '👤'}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.messageContent}>
+          <View style={styles.messageHeader}>
+            <Text style={styles.messageName}>{item.user_name}</Text>
+            <Text style={styles.messageTime}>
+              {new Date(item.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </Text>
           </View>
-        )}
-      </View>
-
-      <View style={styles.messageContent}>
-        <View style={styles.messageHeader}>
-          <Text style={styles.messageName}>{item.user_name}</Text>
-          <Text style={styles.messageTime}>
-            {new Date(item.created_at).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Text>
+          <Text style={styles.messageText}>{item.content}</Text>
+          {item.is_edited && <Text style={styles.editedLabel}>(edited)</Text>}
         </View>
-        <Text style={styles.messageText}>{item.content}</Text>
-        {item.is_edited && <Text style={styles.editedLabel}>(edited)</Text>}
-      </View>
-    </View>
-  )
+      </Animated.View>
+    )
+  }
 
   const renderActivity = (item: Activity) => (
     <View key={item.id} style={styles.activityItem}>
@@ -402,10 +436,19 @@ export default function MessagesScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.flex}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Household Chat</Text>
-          </View>
+          {/* Header with Blur */}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                transform: [{ scale: headerScaleAnim }],
+              },
+            ]}
+          >
+            <BlurView intensity={80} style={styles.headerBlur}>
+              <Text style={styles.headerTitle}>💬 Household Chat</Text>
+            </BlurView>
+          </Animated.View>
 
           {/* Tabs */}
           <View style={styles.tabsContainer}>
@@ -451,13 +494,37 @@ export default function MessagesScreen() {
 
           {/* Message Input */}
           {activeTab !== 'activities' && (
-            <View style={styles.inputContainer}>
+            <Animated.View
+              style={[
+                styles.inputContainer,
+                {
+                  transform: [{ scale: inputFocusAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.02],
+                  }) }],
+                },
+              ]}
+            >
               <TextInput
                 style={styles.input}
                 placeholder={`Send a ${activeTab === 'notes' ? 'note' : 'message'}...`}
                 placeholderTextColor="#999"
                 value={messageText}
                 onChangeText={setMessageText}
+                onFocus={() => {
+                  Animated.timing(inputFocusAnim, {
+                    toValue: 1,
+                    duration: 200,
+                    useNativeDriver: true,
+                  }).start()
+                }}
+                onBlur={() => {
+                  Animated.timing(inputFocusAnim, {
+                    toValue: 0,
+                    duration: 200,
+                    useNativeDriver: true,
+                  }).start()
+                }}
                 multiline
                 maxLength={500}
               />
@@ -474,11 +541,11 @@ export default function MessagesScreen() {
                   {sending ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={styles.sendButtonText}>Send</Text>
+                    <Text style={styles.sendButtonText}>✓ Send</Text>
                   )}
                 </TouchableOpacity>
               </Animated.View>
-            </View>
+            </Animated.View>
           )}
 
           {/* Success Animation */}
@@ -511,6 +578,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+    overflow: 'hidden',
+  },
+  headerBlur: {
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   headerTitle: {
     fontSize: 24,

@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import LottieView from 'lottie-react-native'
 import { useEffect, useRef } from 'react'
 import {
     Animated,
@@ -76,12 +75,7 @@ export default function Screen1Welcome() {
         >
           {/* Logo Section */}
           <View style={styles.logoSection}>
-            <LottieView
-              source={require('../../assets/animations/household.json')}
-              autoPlay
-              loop
-              style={styles.lottieAnimation}
-            />
+            <View style={styles.placeholderImage} />
 
             <Text style={styles.appName}>SplitDuty</Text>
             <Text style={styles.tagline}>Share Life, Split Smart</Text>
@@ -158,10 +152,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  lottieAnimation: {
+  placeholderImage: {
     width: 250,
     height: 250,
     marginBottom: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   appName: {
     fontSize: 32,

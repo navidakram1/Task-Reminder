@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
-import LottieView from 'lottie-react-native'
 import { useEffect, useRef } from 'react'
 import {
     Animated,
@@ -72,12 +71,7 @@ export default function Screen3AIEngine() {
         >
           {/* Animation Section */}
           <View style={styles.animationSection}>
-            <LottieView
-              source={require('../../assets/animations/ai-brain.json')}
-              autoPlay
-              loop
-              style={styles.lottieAnimation}
-            />
+            <View style={styles.placeholderImage} />
           </View>
 
           {/* Title Section */}
@@ -176,9 +170,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 30,
   },
-  lottieAnimation: {
+  placeholderImage: {
     width: 200,
     height: 200,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   titleSection: {
     marginBottom: 30,

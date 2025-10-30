@@ -1,15 +1,15 @@
-import { DotLottie } from '@lottiefiles/dotlottie-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import LottieView from 'lottie-react-native'
 import { useEffect, useRef } from 'react'
 import {
-  Animated,
-  Dimensions,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Animated,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native'
 
 const { width, height } = Dimensions.get('window')
@@ -76,12 +76,10 @@ export default function Screen1Welcome() {
         >
           {/* Logo Section */}
           <View style={styles.logoSection}>
-            <DotLottie
-              source={{
-                url: 'https://lottie.host/602f227f-fde0-4352-97c5-ff97095cce32/V64W4LS4Z3.lottie',
-              }}
+            <LottieView
+              source={require('../../assets/animations/household.json')}
+              autoPlay
               loop
-              autoplay
               style={styles.lottieAnimation}
             />
 

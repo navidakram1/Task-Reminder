@@ -1,4 +1,3 @@
-import { DotLottie } from '@lottiefiles/dotlottie-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useRef } from 'react'
@@ -111,14 +110,9 @@ export default function IntroScreen() {
           }
         ]}
       >
-        {/* Logo Section - Lottie Animation */}
+        {/* Logo Section - Placeholder */}
         <View style={styles.logoSection}>
-          <DotLottie
-            source={{ url: 'https://lottie.host/602f227f-fde0-4352-97c5-ff97095cce32/V64W4LS4Z3.lottie' }}
-            loop
-            autoplay
-            style={styles.lottieAnimation}
-          />
+          <View style={styles.placeholderImage} />
 
           <Text style={styles.appName}>SplitDuty</Text>
           <Text style={styles.tagline}>Manage your household together</Text>
@@ -232,10 +226,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  lottieAnimation: {
+  placeholderImage: {
     width: 250,
     height: 250,
     marginBottom: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 20,
   },
   appName: {
     fontSize: 36,

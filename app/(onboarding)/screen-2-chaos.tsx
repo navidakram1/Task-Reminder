@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
+import LottieView from 'lottie-react-native'
 import { useEffect, useRef, useState } from 'react'
 import {
     Animated,

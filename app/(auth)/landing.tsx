@@ -69,6 +69,57 @@ const features: FeatureItem[] = [
   }
 ]
 
+const testimonials = [
+  {
+    id: '1',
+    name: 'Alex Johnson',
+    role: 'College Student',
+    text: 'Finally! No more arguments about who does the dishes. SplitDuty made our apartment peaceful.',
+    rating: 5
+  },
+  {
+    id: '2',
+    name: 'Sarah Chen',
+    role: 'Parent',
+    text: 'My kids actually do their chores now. The gamification is genius!',
+    rating: 5
+  },
+  {
+    id: '3',
+    name: 'Mike Rodriguez',
+    role: 'Airbnb Host',
+    text: 'Photo proof of cleaning is a game-changer. No more disputes with guests.',
+    rating: 5
+  }
+]
+
+const pricingPlans = [
+  {
+    name: 'Free',
+    price: '$0',
+    period: 'Forever',
+    features: ['Basic task management', 'Simple bill splitting', 'Up to 5 members'],
+    cta: 'Get Started',
+    popular: false
+  },
+  {
+    name: 'Premium',
+    price: '$3',
+    period: '/month',
+    features: ['Unlimited tasks', 'Advanced splitting', 'Unlimited members', 'No ads'],
+    cta: 'Start Free Trial',
+    popular: true
+  },
+  {
+    name: 'Lifetime',
+    price: '$15',
+    period: 'One-time',
+    features: ['Everything in Premium', 'Priority support', 'Early access'],
+    cta: 'Buy Lifetime',
+    popular: false
+  }
+]
+
 export default function LandingScreen() {
   const [currentFeature, setCurrentFeature] = useState(0)
   const scrollY = useRef(new Animated.Value(0)).current
@@ -190,11 +241,11 @@ export default function LandingScreen() {
               {/* Hero Text */}
               <View style={styles.heroText}>
                 <Text style={styles.heroTitle}>
-                  Transform Your{'\n'}
-                  <Text style={styles.heroTitleAccent}>Household Management</Text>
+                  Stop Arguing{'\n'}
+                  <Text style={styles.heroTitleAccent}>About Chores & Bills</Text>
                 </Text>
                 <Text style={styles.heroSubtitle}>
-                  Organize tasks, split bills, and keep everyone accountable with the ultimate household management app
+                  AI-powered fairness ensures everyone contributes equally. No more lost receipts. No more "who owes what?"
                 </Text>
               </View>
 
@@ -241,6 +292,24 @@ export default function LandingScreen() {
             </Animated.View>
           </LinearGradient>
         </Animated.View>
+
+        {/* Social Proof Section */}
+        <View style={styles.socialProofSection}>
+          <View style={styles.proofItem}>
+            <Text style={styles.proofNumber}>50K+</Text>
+            <Text style={styles.proofLabel}>Active Users</Text>
+          </View>
+          <View style={styles.proofDivider} />
+          <View style={styles.proofItem}>
+            <Text style={styles.proofNumber}>4.8★</Text>
+            <Text style={styles.proofLabel}>App Rating</Text>
+          </View>
+          <View style={styles.proofDivider} />
+          <View style={styles.proofItem}>
+            <Text style={styles.proofNumber}>$2M+</Text>
+            <Text style={styles.proofLabel}>Bills Split</Text>
+          </View>
+        </View>
 
         {/* Features Carousel */}
         <View style={styles.featuresSection}>
@@ -324,26 +393,81 @@ export default function LandingScreen() {
           </View>
         </View>
 
+        {/* Testimonials Section */}
+        <View style={styles.testimonialsSection}>
+          <Text style={styles.sectionTitle}>Loved by Households</Text>
+          <Text style={styles.sectionSubtitle}>
+            Join thousands of happy users transforming their homes
+          </Text>
+
+          <View style={styles.testimonialsList}>
+            {testimonials.map((testimonial) => (
+              <View key={testimonial.id} style={styles.testimonialCard}>
+                <View style={styles.testimonialRating}>
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Text key={i} style={styles.star}>⭐</Text>
+                  ))}
+                </View>
+                <Text style={styles.testimonialText}>"{testimonial.text}"</Text>
+                <View style={styles.testimonialAuthor}>
+                  <Text style={styles.testimonialName}>{testimonial.name}</Text>
+                  <Text style={styles.testimonialRole}>{testimonial.role}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
         {/* Pricing Preview */}
         <View style={styles.pricingSection}>
           <Text style={styles.sectionTitle}>Simple, Affordable Pricing</Text>
+          <Text style={styles.sectionSubtitle}>
+            Choose the plan that works for you
+          </Text>
 
           <View style={styles.pricingCards}>
-            <View style={styles.pricingCard}>
-              <Text style={styles.pricingPlan}>Free</Text>
-              <Text style={styles.pricingPrice}>$0</Text>
-              <Text style={styles.pricingFeatures}>• Basic task management{'\n'}• Simple bill splitting{'\n'}• Up to 5 household members</Text>
-            </View>
+            {pricingPlans.map((plan, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.pricingCard,
+                  plan.popular && styles.popularCard
+                ]}
+              >
+                {plan.popular && (
+                  <View style={styles.popularBadge}>
+                    <Text style={styles.popularText}>Most Popular</Text>
+                  </View>
+                )}
+                <Text style={styles.pricingPlan}>{plan.name}</Text>
+                <Text style={styles.pricingPrice}>{plan.price}</Text>
+                <Text style={styles.pricingPeriod}>{plan.period}</Text>
 
-            <View style={[styles.pricingCard, styles.popularCard]}>
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>Most Popular</Text>
+                <View style={styles.pricingFeaturesList}>
+                  {plan.features.map((feature, idx) => (
+                    <View key={idx} style={styles.featureRow}>
+                      <Text style={styles.checkmark}>✓</Text>
+                      <Text style={styles.featureText}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.pricingButton,
+                    plan.popular && styles.pricingButtonPrimary
+                  ]}
+                  onPress={() => router.push('/(auth)/signup')}
+                >
+                  <Text style={[
+                    styles.pricingButtonText,
+                    plan.popular && styles.pricingButtonTextPrimary
+                  ]}>
+                    {plan.cta}
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.pricingPlan}>Lifetime</Text>
-              <Text style={styles.pricingPrice}>$15</Text>
-              <Text style={styles.pricingSubprice}>One-time payment</Text>
-              <Text style={styles.pricingFeatures}>• Everything in Free{'\n'}• Unlimited households{'\n'}• Advanced analytics{'\n'}• Priority support</Text>
-            </View>
+            ))}
           </View>
         </View>
 
@@ -679,108 +803,141 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     lineHeight: 20,
   },
-  featureItem: {
+  // Social Proof Section
+  socialProofSection: {
     flexDirection: 'row',
-    marginBottom: 20,
-    alignItems: 'flex-start',
-  },
-  featureIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
+    justifyContent: 'space-around',
     alignItems: 'center',
-    marginRight: 15,
+    marginHorizontal: 20,
+    marginBottom: 40,
+    backgroundColor: '#ffffff',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
-  featureIconText: {
-    fontSize: 20,
-  },
-  featureContent: {
+  proofItem: {
+    alignItems: 'center',
     flex: 1,
   },
-  featureTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
+  proofNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#667eea',
+    marginBottom: 4,
   },
-  featureDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+  proofLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
   },
-  pricingSection: {
+  proofDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#e5e7eb',
+  },
+
+  // Testimonials Section
+  testimonialsSection: {
+    paddingHorizontal: 20,
     marginBottom: 40,
   },
-  pricingCards: {
+  testimonialsList: {
+    gap: 16,
+  },
+  testimonialCard: {
+    backgroundColor: '#ffffff',
+    padding: 24,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  testimonialRating: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    marginBottom: 12,
   },
-  pricingCard: {
-    width: '30%',
-    backgroundColor: '#f8f9fa',
-    padding: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 15,
-    position: 'relative',
+  star: {
+    fontSize: 14,
+    marginRight: 4,
   },
-  popularCard: {
-    backgroundColor: '#667eea',
-    transform: [{ scale: 1.05 }],
-  },
-  popularBadge: {
-    position: 'absolute',
-    top: -10,
-    backgroundColor: '#ff6b6b',
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  planName: {
+  testimonialText: {
     fontSize: 16,
+    color: '#374151',
+    lineHeight: 24,
+    marginBottom: 16,
+    fontStyle: 'italic',
+  },
+  testimonialAuthor: {
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingTop: 12,
+  },
+  testimonialName: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
+    color: '#1f2937',
   },
-  planPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#667eea',
-    marginBottom: 10,
-  },
-  planDescription: {
+  testimonialRole: {
     fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 18,
+    color: '#6b7280',
+    marginTop: 2,
   },
-  // Modern pricing styles
+
+  // Pricing Section (Updated)
   pricingSection: {
     paddingHorizontal: 20,
     marginBottom: 40,
   },
   pricingCards: {
-    flexDirection: 'row',
+    flexDirection: width < 768 ? 'column' : 'row',
     gap: 16,
     justifyContent: 'center',
   },
-  pricingFeatures: {
-    fontSize: 14,
-    color: '#6b7280',
-    textAlign: 'center',
-    lineHeight: 22,
+  pricingCard: {
+    width: width < 768 ? '100%' : width < 1024 ? '48%' : '31%',
+    backgroundColor: '#ffffff',
+    padding: 24,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    position: 'relative',
+  },
+  popularCard: {
+    backgroundColor: '#667eea',
+    elevation: 8,
+    shadowOpacity: 0.15,
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -12,
+    left: '50%',
+    marginLeft: -40,
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  popularText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   pricingPlan: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1f2937',
     marginBottom: 8,
+    marginTop: 8,
   },
   pricingPrice: {
     fontSize: 32,
@@ -788,15 +945,47 @@ const styles = StyleSheet.create({
     color: '#667eea',
     marginBottom: 4,
   },
-  pricingSubprice: {
+  pricingPeriod: {
     fontSize: 12,
     color: '#6b7280',
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  popularText: {
-    color: '#ffffff',
-    fontSize: 12,
+  pricingFeaturesList: {
+    marginBottom: 24,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  checkmark: {
+    fontSize: 16,
+    color: '#10b981',
+    marginRight: 12,
+    fontWeight: '700',
+  },
+  featureText: {
+    fontSize: 14,
+    color: '#6b7280',
+    flex: 1,
+  },
+  pricingButton: {
+    backgroundColor: '#f3f4f6',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  pricingButtonPrimary: {
+    backgroundColor: '#ffffff',
+  },
+  pricingButtonText: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#667eea',
+  },
+  pricingButtonTextPrimary: {
+    color: '#667eea',
   },
   finalCTA: {
     marginHorizontal: 20,

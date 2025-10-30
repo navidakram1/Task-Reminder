@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
@@ -33,8 +32,8 @@ export default function FeaturesScreen() {
       title: 'Smart Task Assignment',
       description: 'AI-powered fair distribution of household chores with intelligent scheduling',
       demo: 'Watch tasks automatically shuffle between family members',
-      color: '#667eea',
-      gradient: ['#667eea', '#764ba2'],
+      color: '#5B7C99',
+      gradient: ['#5B7C99', '#6B8CAA'],
       benefits: ['Fair distribution', 'Reduces conflicts', 'Saves time']
     },
     {
@@ -42,8 +41,8 @@ export default function FeaturesScreen() {
       title: 'Easy Bill Splitting',
       description: 'Split expenses fairly with custom or equal shares, track payments',
       demo: 'See how bills are divided and tracked automatically',
-      color: '#764ba2',
-      gradient: ['#764ba2', '#f093fb'],
+      color: '#6B8CAA',
+      gradient: ['#6B8CAA', '#7B9CBB'],
       benefits: ['Custom splits', 'Payment tracking', 'Receipt storage']
     },
     {
@@ -51,8 +50,8 @@ export default function FeaturesScreen() {
       title: 'Task Approval System',
       description: 'Verify completed tasks with photo proof and quality control',
       demo: 'Experience the satisfaction of checking off completed tasks',
-      color: '#f093fb',
-      gradient: ['#f093fb', '#f5576c'],
+      color: '#7B9CBB',
+      gradient: ['#7B9CBB', '#8BACCC'],
       benefits: ['Photo verification', 'Quality control', 'Accountability']
     },
     {
@@ -60,8 +59,8 @@ export default function FeaturesScreen() {
       title: 'Smart Notifications',
       description: 'Get reminded at the right time with intelligent scheduling',
       demo: 'Never miss a task or bill payment again',
-      color: '#4facfe',
-      gradient: ['#4facfe', '#00f2fe'],
+      color: '#8BACCC',
+      gradient: ['#8BACCC', '#9BBCDD'],
       benefits: ['Smart timing', 'Multiple channels', 'Customizable']
     }
   ]
@@ -101,7 +100,7 @@ export default function FeaturesScreen() {
   }, [activeFeature])
 
   const handleNext = () => {
-    router.push('/(onboarding)/permissions')
+    router.push('/(onboarding)/welcome')
   }
 
   const handleBack = () => {
@@ -115,7 +114,7 @@ export default function FeaturesScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
+        colors={['#FFFFFF', '#F8FAFB']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -132,141 +131,51 @@ export default function FeaturesScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Powerful Features</Text>
-          <Text style={styles.subtitle}>Everything you need to manage your household</Text>
+          <Text style={styles.title}>Key Features</Text>
+          <Text style={styles.subtitle}>Discover what makes HomeTask special</Text>
         </View>
 
-        {/* Feature Showcase */}
+        {/* Feature Showcase - SIMPLIFIED */}
         <View style={styles.featuresContainer}>
-          {/* Active Feature Display */}
+          {/* Active Feature Display - CLEAN & SIMPLE */}
           <Animated.View
             style={[
               styles.activeFeatureCard,
               {
                 opacity: featureAnimations[activeFeature],
-                transform: [
-                  {
-                    scale: featureAnimations[activeFeature].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    })
-                  }
-                ]
               }
             ]}
           >
-            <LinearGradient
-              colors={features[activeFeature].gradient}
-              style={styles.activeCardGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <BlurView intensity={30} style={styles.activeCardBlur}>
-                <View style={styles.activeCardContent}>
-                  <View style={styles.activeFeatureIcon}>
-                    <Text style={styles.activeIconText}>{features[activeFeature].icon}</Text>
+            <View style={styles.activeCardContent}>
+              {/* Icon */}
+              <View style={styles.activeFeatureIcon}>
+                <Text style={styles.activeIconText}>{features[activeFeature].icon}</Text>
+              </View>
+
+              {/* Title */}
+              <Text style={styles.activeFeatureTitle}>{features[activeFeature].title}</Text>
+
+              {/* Description */}
+              <Text style={styles.activeFeatureDescription}>{features[activeFeature].description}</Text>
+
+              {/* Benefits List - SIMPLE */}
+              <View style={styles.benefitsContainer}>
+                {features[activeFeature].benefits.map((benefit, index) => (
+                  <View key={index} style={styles.benefitItem}>
+                    <View style={styles.benefitDot} />
+                    <Text style={styles.benefitText}>{benefit}</Text>
                   </View>
+                ))}
+              </View>
 
-                  <Text style={styles.activeFeatureTitle}>{features[activeFeature].title}</Text>
-                  <Text style={styles.activeFeatureDescription}>{features[activeFeature].description}</Text>
-
-                  {/* Benefits List */}
-                  <View style={styles.benefitsContainer}>
-                    {features[activeFeature].benefits.map((benefit, index) => (
-                      <Animated.View
-                        key={index}
-                        style={[
-                          styles.benefitItem,
-                          {
-                            opacity: featureAnimations[activeFeature],
-                            transform: [
-                              {
-                                translateX: featureAnimations[activeFeature].interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [20, 0],
-                                })
-                              }
-                            ]
-                          }
-                        ]}
-                      >
-                        <View style={styles.benefitDot} />
-                        <Text style={styles.benefitText}>{benefit}</Text>
-                      </Animated.View>
-                    ))}
-                  </View>
-
-                  {/* Demo Animation */}
-                  <Animated.View
-                    style={[
-                      styles.demoContainer,
-                      {
-                        opacity: featureAnimations[activeFeature],
-                      }
-                    ]}
-                  >
-                    <View style={styles.demoBox}>
-                      <Text style={styles.demoText}>{features[activeFeature].demo}</Text>
-                      <View style={styles.demoAnimation}>
-                        <Animated.View
-                          style={[
-                            styles.demoElement,
-                            {
-                              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                              transform: [
-                                {
-                                  translateX: featureAnimations[activeFeature].interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0, 40],
-                                  })
-                                },
-                                {
-                                  rotate: featureAnimations[activeFeature].interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: ['0deg', '360deg'],
-                                  })
-                                }
-                              ]
-                            }
-                          ]}
-                        />
-                        <Animated.View
-                          style={[
-                            styles.demoElement,
-                            {
-                              backgroundColor: 'rgba(255, 255, 255, 0.6)',
-                              transform: [
-                                {
-                                  scale: featureAnimations[activeFeature].interpolate({
-                                    inputRange: [0, 1],
-                                    outputRange: [0.5, 1.2],
-                                  })
-                                }
-                              ]
-                            }
-                          ]}
-                        />
-                        <Animated.View
-                          style={[
-                            styles.demoElement,
-                            {
-                              backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                              opacity: featureAnimations[activeFeature].interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0.2, 1],
-                              })
-                            }
-                          ]}
-                        />
-                      </View>
-                    </View>
-                  </Animated.View>
-                </View>
-              </BlurView>
-            </LinearGradient>
+              {/* Demo Text - SIMPLE */}
+              <View style={styles.demoBox}>
+                <Text style={styles.demoText}>{features[activeFeature].demo}</Text>
+              </View>
+            </View>
           </Animated.View>
 
-          {/* Feature Selection Grid */}
+          {/* Feature Selection Grid - CLEAN */}
           <View style={styles.featureGrid}>
             {features.map((feature, index) => (
               <TouchableOpacity
@@ -278,23 +187,18 @@ export default function FeaturesScreen() {
                 onPress={() => setActiveFeature(index)}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={index === activeFeature ? feature.gradient : ['rgba(255,255,255,0.1)', 'rgba(255,255,255,0.05)']}
-                  style={styles.selectorGradient}
-                >
-                  <Text style={[
-                    styles.selectorIcon,
-                    index === activeFeature && styles.activeSelectorIcon
-                  ]}>
-                    {feature.icon}
-                  </Text>
+                <View style={[
+                  styles.selectorContent,
+                  index === activeFeature && styles.activeSelectorContent
+                ]}>
+                  <Text style={styles.selectorIcon}>{feature.icon}</Text>
                   <Text style={[
                     styles.selectorTitle,
                     index === activeFeature && styles.activeSelectorTitle
                   ]}>
                     {feature.title}
                   </Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -314,8 +218,8 @@ export default function FeaturesScreen() {
           ))}
         </View>
 
-        {/* Benefits List */}
-        <BlurView intensity={15} style={styles.benefitsCard}>
+        {/* Benefits List - CLEAN */}
+        <View style={styles.benefitsCard}>
           <View style={styles.benefitsContent}>
             <Text style={styles.benefitsTitle}>Why HomeTask?</Text>
             <View style={styles.benefitsList}>
@@ -333,21 +237,16 @@ export default function FeaturesScreen() {
               </View>
             </View>
           </View>
-        </BlurView>
+        </View>
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - CLEAN */}
         <View style={styles.navigationButtons}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)']}
-              style={styles.nextButtonGradient}
-            >
-              <Text style={styles.nextButtonText}>Continue →</Text>
-            </LinearGradient>
+            <Text style={styles.nextButtonText}>Continue →</Text>
           </TouchableOpacity>
         </View>
 
@@ -389,83 +288,75 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1A2332',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 15,
+    color: '#5B7C99',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   featuresContainer: {
     flex: 1,
     justifyContent: 'center',
     marginBottom: 20,
   },
-  // Active Feature Card Styles
+  // Active Feature Card Styles - SIMPLIFIED
   activeFeatureCard: {
     marginBottom: 24,
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  activeCardGradient: {
-    borderRadius: 24,
-  },
-  activeCardBlur: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E8ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   activeCardContent: {
     padding: 28,
     alignItems: 'center',
   },
   activeFeatureIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F0F4F8',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   activeIconText: {
-    fontSize: 36,
+    fontSize: 32,
   },
   activeFeatureTitle: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1A2332',
     marginBottom: 12,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   activeFeatureDescription: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 15,
+    color: '#5B7C99',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 20,
-    fontWeight: '500',
+    fontWeight: '400',
   },
   // Benefits Container
   benefitsContainer: {
@@ -475,19 +366,19 @@ const styles = StyleSheet.create({
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
-    paddingHorizontal: 16,
+    marginBottom: 10,
+    paddingHorizontal: 0,
   },
   benefitDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#5B7C99',
     marginRight: 12,
   },
   benefitText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#1A2332',
     fontWeight: '500',
   },
   // Feature Grid Styles
@@ -495,174 +386,162 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   featureSelector: {
     width: '48%',
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   activeFeatureselector: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  selectorGradient: {
-    padding: 16,
+  selectorContent: {
+    padding: 14,
     alignItems: 'center',
-    minHeight: 80,
+    minHeight: 76,
     justifyContent: 'center',
+    backgroundColor: '#F0F4F8',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8ECEF',
+  },
+  activeSelectorContent: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#5B7C99',
+    borderWidth: 2,
   },
   selectorIcon: {
     fontSize: 24,
-    marginBottom: 8,
-    opacity: 0.7,
-  },
-  activeSelectorIcon: {
-    opacity: 1,
-    fontSize: 28,
+    marginBottom: 6,
   },
   selectorTitle: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#5B7C99',
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 16,
   },
   activeSelectorTitle: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  demoContainer: {
-    marginTop: 16,
-    width: '100%',
+    color: '#1A2332',
+    fontWeight: '600',
+    fontSize: 12,
   },
   demoBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#F0F4F8',
+    borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E8ECEF',
+    marginTop: 16,
   },
   demoText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 13,
+    color: '#5B7C99',
     textAlign: 'center',
-    marginBottom: 16,
-    fontWeight: '500',
+    fontWeight: '400',
     fontStyle: 'italic',
-  },
-  demoAnimation: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    height: 40,
-  },
-  demoElement: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    lineHeight: 20,
   },
   indicators: {
     flexDirection: 'row',
     justifyContent: 'center',
     marginBottom: 20,
-    gap: 8,
+    gap: 6,
   },
   indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D4DFE8',
   },
   activeIndicator: {
-    backgroundColor: '#ffffff',
-    width: 24,
+    backgroundColor: '#5B7C99',
+    width: 20,
   },
   benefitsCard: {
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E8ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   benefitsContent: {
-    padding: 20,
+    padding: 24,
   },
   benefitsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#1A2332',
     marginBottom: 16,
     textAlign: 'center',
   },
   benefitsList: {
-    gap: 12,
+    gap: 14,
   },
   benefit: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   benefitIcon: {
-    fontSize: 20,
+    fontSize: 18,
     marginRight: 12,
   },
   benefitText: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: '#1A2332',
     fontWeight: '500',
   },
   navigationButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 16,
-    gap: 16,
+    gap: 12,
   },
   backButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    backgroundColor: '#F0F4F8',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E8ECEF',
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 15,
+    color: '#5B7C99',
     fontWeight: '600',
   },
   nextButton: {
     flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  nextButtonGradient: {
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#5B7C99',
   },
   nextButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-    color: '#667eea',
+    color: '#FFFFFF',
   },
   skipButton: {
     paddingVertical: 12,
     alignItems: 'center',
   },
   skipButtonText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 13,
+    color: '#5B7C99',
     fontWeight: '500',
   },
   progressContainer: {
@@ -671,13 +550,13 @@ const styles = StyleSheet.create({
   },
   progressDots: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D4DFE8',
   },
   activeDot: {
     backgroundColor: '#ffffff',

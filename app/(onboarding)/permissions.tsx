@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Notifications from 'expo-notifications'
 import { router } from 'expo-router'
@@ -132,18 +131,8 @@ export default function PermissionsScreen() {
   }
 
   const handleContinue = () => {
-    if (!permissions.notifications) {
-      Alert.alert(
-        'Notifications Recommended',
-        'Notifications help you stay on top of tasks and bills. Are you sure you want to continue without them?',
-        [
-          { text: 'Enable Notifications', onPress: requestNotificationPermission },
-          { text: 'Continue Anyway', onPress: () => router.push('/(onboarding)/welcome') }
-        ]
-      )
-    } else {
-      router.push('/(onboarding)/welcome')
-    }
+    // Always go to login/auth screen after permissions
+    router.push('/(auth)/landing')
   }
 
   const handleBack = () => {
@@ -157,7 +146,7 @@ export default function PermissionsScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
+        colors={['#FFFFFF', '#F8FAFB']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -172,15 +161,15 @@ export default function PermissionsScreen() {
           }
         ]}
       >
-        {/* Header */}
+        {/* Header - CLEAN */}
         <View style={styles.header}>
-          <Text style={styles.title}>Enable Permissions</Text>
+          <Text style={styles.title}>Permissions</Text>
           <Text style={styles.subtitle}>
-            Help us provide the best experience by allowing these permissions
+            Allow permissions for the best experience
           </Text>
         </View>
 
-        {/* Permission Cards */}
+        {/* Permission Cards - CLEAN */}
         <View style={styles.permissionsContainer}>
           {permissionItems.map((item, index) => (
             <Animated.View
@@ -189,82 +178,65 @@ export default function PermissionsScreen() {
                 styles.permissionCard,
                 {
                   opacity: permissionAnimations[item.key],
-                  transform: [
-                    {
-                      translateY: permissionAnimations[item.key].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [30, 0],
-                      })
-                    }
-                  ]
                 }
               ]}
             >
-              <BlurView intensity={20} style={styles.cardBlur}>
-                <View style={styles.cardContent}>
-                  <View style={styles.permissionHeader}>
-                    <View style={styles.iconContainer}>
-                      <Text style={styles.permissionIcon}>{item.icon}</Text>
-                    </View>
-                    <View style={styles.permissionInfo}>
-                      <View style={styles.titleRow}>
-                        <Text style={styles.permissionTitle}>{item.title}</Text>
-                        {item.required && (
-                          <View style={styles.requiredBadge}>
-                            <Text style={styles.requiredText}>Required</Text>
-                          </View>
-                        )}
-                      </View>
-                      <Text style={styles.permissionDescription}>{item.description}</Text>
-                      <Text style={styles.permissionBenefit}>✨ {item.benefit}</Text>
-                    </View>
+              <View style={styles.cardContent}>
+                <View style={styles.permissionHeader}>
+                  <View style={styles.iconContainer}>
+                    <Text style={styles.permissionIcon}>{item.icon}</Text>
                   </View>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.permissionButton,
-                      permissions[item.key] && styles.permissionButtonGranted
-                    ]}
-                    onPress={() => handlePermissionRequest(item.key)}
-                    disabled={permissions[item.key]}
-                  >
-                    <Text style={[
-                      styles.permissionButtonText,
-                      permissions[item.key] && styles.permissionButtonTextGranted
-                    ]}>
-                      {permissions[item.key] ? '✓ Granted' : 'Allow'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.permissionInfo}>
+                    <View style={styles.titleRow}>
+                      <Text style={styles.permissionTitle}>{item.title}</Text>
+                      {item.required && (
+                        <View style={styles.requiredBadge}>
+                          <Text style={styles.requiredText}>Required</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.permissionDescription}>{item.description}</Text>
+                  </View>
                 </View>
-              </BlurView>
+
+                <TouchableOpacity
+                  style={[
+                    styles.permissionButton,
+                    permissions[item.key] && styles.permissionButtonGranted
+                  ]}
+                  onPress={() => handlePermissionRequest(item.key)}
+                  disabled={permissions[item.key]}
+                >
+                  <Text style={[
+                    styles.permissionButtonText,
+                    permissions[item.key] && styles.permissionButtonTextGranted
+                  ]}>
+                    {permissions[item.key] ? '✓ Granted' : 'Allow'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </Animated.View>
           ))}
         </View>
 
-        {/* Info Section */}
-        <BlurView intensity={15} style={styles.infoCard}>
+        {/* Info Section - CLEAN */}
+        <View style={styles.infoCard}>
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>🔒 Your Privacy Matters</Text>
             <Text style={styles.infoText}>
-              We only use these permissions to enhance your HomeTask experience. 
-              Your data stays secure and is never shared with third parties.
+              We only use these permissions to enhance your experience. Your data stays secure.
             </Text>
           </View>
-        </BlurView>
+        </View>
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - CLEAN */}
         <View style={styles.navigationButtons}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)']}
-              style={styles.continueButtonGradient}
-            >
-              <Text style={styles.continueButtonText}>Continue →</Text>
-            </LinearGradient>
+            <Text style={styles.continueButtonText}>Continue →</Text>
           </TouchableOpacity>
         </View>
 
@@ -301,243 +273,216 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 100 : 80,
-    paddingBottom: 60,
+    paddingTop: Platform.OS === 'ios' ? 80 : 60,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
-    paddingHorizontal: 10,
+    marginBottom: 24,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1A2332',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 15,
+    color: '#5B7C99',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '400',
     lineHeight: 22,
   },
   permissionsContainer: {
     flex: 1,
-    gap: 20,
-    marginBottom: 30,
-    paddingHorizontal: 5,
+    gap: 12,
+    marginBottom: 20,
   },
   permissionCard: {
-    borderRadius: 24,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  cardBlur: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#E8ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardContent: {
-    padding: 24,
+    padding: 16,
   },
   permissionHeader: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 12,
     alignItems: 'flex-start',
   },
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F0F4F8',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 20,
+    marginRight: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 1,
   },
   permissionIcon: {
-    fontSize: 28,
+    fontSize: 24,
   },
   permissionInfo: {
     flex: 1,
-    paddingTop: 2,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
     flexWrap: 'wrap',
   },
   permissionTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#ffffff',
-    flex: 1,
-    marginRight: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  requiredBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-  },
-  requiredText: {
-    fontSize: 11,
-    color: '#ffffff',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  permissionDescription: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
-    lineHeight: 22,
-    marginBottom: 8,
-    fontWeight: '400',
-  },
-  permissionBenefit: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '600',
-    fontStyle: 'italic',
-  },
-  permissionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  permissionButtonGranted: {
-    backgroundColor: 'rgba(76, 175, 80, 0.95)',
-    borderColor: 'rgba(76, 175, 80, 0.5)',
-  },
-  permissionButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#667eea',
-    letterSpacing: 0.5,
+    color: '#1A2332',
+    flex: 1,
+    marginRight: 8,
+  },
+  requiredBadge: {
+    backgroundColor: '#F0F4F8',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E8ECEF',
+  },
+  requiredText: {
+    fontSize: 10,
+    color: '#5B7C99',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  permissionDescription: {
+    fontSize: 13,
+    color: '#5B7C99',
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  permissionButton: {
+    backgroundColor: '#F0F4F8',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E8ECEF',
+  },
+  permissionButtonGranted: {
+    backgroundColor: '#51cf66',
+    borderColor: '#51cf66',
+  },
+  permissionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5B7C99',
   },
   permissionButtonTextGranted: {
-    color: '#ffffff',
+    color: '#FFFFFF',
   },
   infoCard: {
-    borderRadius: 20,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 32,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    marginBottom: 16,
+    backgroundColor: '#F0F4F8',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderColor: '#E8ECEF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   infoContent: {
-    padding: 20,
+    padding: 14,
     alignItems: 'center',
   },
   infoTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1A2332',
+    marginBottom: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
   infoText: {
-    fontSize: 15,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    color: '#5B7C99',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 20,
     fontWeight: '400',
   },
   navigationButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 16,
-    paddingHorizontal: 5,
+    marginBottom: 12,
+    gap: 12,
   },
   backButton: {
     flex: 1,
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    backgroundColor: '#F0F4F8',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: '#E8ECEF',
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 14,
+    color: '#5B7C99',
     fontWeight: '600',
   },
   continueButton: {
     flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  continueButtonGradient: {
-    paddingVertical: 16,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: '#5B7C99',
   },
   continueButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#667eea',
+    color: '#FFFFFF',
   },
   skipButton: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   skipButtonText: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 13,
+    color: '#5B7C99',
     fontWeight: '500',
   },
   progressContainer: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 12,
   },
   progressDots: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D4DFE8',
   },
   activeDot: {
-    backgroundColor: '#ffffff',
-    width: 24,
+    backgroundColor: '#5B7C99',
+    width: 20,
   },
 })

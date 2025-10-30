@@ -5,7 +5,6 @@ export default function OnboardingLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="intro" />
       <Stack.Screen name="features" />
-      <Stack.Screen name="permissions" />
       <Stack.Screen name="welcome" />
       <Stack.Screen name="create-join-household" />
       <Stack.Screen name="invite-members" />

@@ -25,4 +25,8 @@ config.resolver.blockList = [
 // Add error handling for file watching
 config.resolver.enableGlobalPackages = true;
 
+// Support .lottie files for dotLottie animations
+const { assetExts } = config.resolver;
+config.resolver.assetExts = [...assetExts, 'lottie'];
+
 module.exports = config;

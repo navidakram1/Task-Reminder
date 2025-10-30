@@ -1,4 +1,4 @@
-import { BlurView } from 'expo-blur'
+import { DotLottie } from '@lottiefiles/dotlottie-react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import { useEffect, useRef } from 'react'
@@ -73,39 +73,25 @@ export default function IntroScreen() {
         end={{ x: 1, y: 1 }}
       />
       
-      {/* Animated background elements */}
+      {/* Animated background elements - Simplified */}
       <View style={styles.backgroundElements}>
-        <Animated.View 
+        <Animated.View
           style={[
             styles.floatingElement,
             styles.element1,
             {
               transform: [
-                { rotate: logoRotate },
                 { scale: scaleAnim }
               ]
             }
           ]}
         />
-        <Animated.View 
+        <Animated.View
           style={[
             styles.floatingElement,
             styles.element2,
             {
               transform: [
-                { rotate: logoRotate },
-                { scale: scaleAnim }
-              ]
-            }
-          ]}
-        />
-        <Animated.View 
-          style={[
-            styles.floatingElement,
-            styles.element3,
-            {
-              transform: [
-                { rotate: logoRotate },
                 { scale: scaleAnim }
               ]
             }
@@ -125,37 +111,28 @@ export default function IntroScreen() {
           }
         ]}
       >
-        {/* Logo Section */}
+        {/* Logo Section - Lottie Animation */}
         <View style={styles.logoSection}>
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              {
-                transform: [{ rotate: logoRotate }]
-              }
-            ]}
-          >
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.3)', 'rgba(255, 255, 255, 0.1)']}
-              style={styles.logoCircle}
-            >
-              <Text style={styles.logoEmoji}>🏠</Text>
-            </LinearGradient>
-          </Animated.View>
-          
-          <Text style={styles.appName}>HomeTask</Text>
+          <DotLottie
+            source={{ url: 'https://lottie.host/602f227f-fde0-4352-97c5-ff97095cce32/V64W4LS4Z3.lottie' }}
+            loop
+            autoplay
+            style={styles.lottieAnimation}
+          />
+
+          <Text style={styles.appName}>SplitDuty</Text>
           <Text style={styles.tagline}>Manage your household together</Text>
         </View>
 
-        {/* Main Content */}
+        {/* Main Content - Clean Design */}
         <View style={styles.mainContent}>
-          <BlurView intensity={20} style={styles.contentCard}>
+          <View style={styles.contentCard}>
             <View style={styles.cardContent}>
-              <Text style={styles.welcomeTitle}>Welcome to the Future of</Text>
-              <Text style={styles.welcomeSubtitle}>Household Management</Text>
-              
+              <Text style={styles.welcomeTitle}>Welcome to</Text>
+              <Text style={styles.welcomeSubtitle}>SplitDuty</Text>
+
               <Text style={styles.description}>
-                Transform your home into a well-organized, stress-free environment where everyone knows their role and contributes fairly.
+                Manage household tasks and split bills fairly with your family or roommates.
               </Text>
 
               <View style={styles.highlights}>
@@ -169,11 +146,11 @@ export default function IntroScreen() {
                 </View>
                 <View style={styles.highlight}>
                   <Text style={styles.highlightIcon}>🔔</Text>
-                  <Text style={styles.highlightText}>Never miss a deadline</Text>
+                  <Text style={styles.highlightText}>Smart reminders</Text>
                 </View>
               </View>
             </View>
-          </BlurView>
+          </View>
         </View>
 
         {/* Action Buttons */}
@@ -255,20 +232,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoContainer: {
+  lottieAnimation: {
+    width: 250,
+    height: 250,
     marginBottom: 20,
-  },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-  },
-  logoEmoji: {
-    fontSize: 40,
   },
   appName: {
     fontSize: 36,
@@ -291,14 +258,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contentCard: {
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   cardContent: {
-    padding: 32,
+    padding: 28,
     alignItems: 'center',
   },
   welcomeTitle: {

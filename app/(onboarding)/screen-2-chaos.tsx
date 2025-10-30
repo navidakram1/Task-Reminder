@@ -91,12 +91,10 @@ export default function Screen2Chaos() {
         >
           {/* Animation Section */}
           <View style={styles.animationSection}>
-            <DotLottie
-              source={{
-                url: 'https://lottie.host/602f227f-fde0-4352-97c5-ff97095cce32/V64W4LS4Z3.lottie',
-              }}
+            <LottieView
+              source={require('../../assets/animations/household.json')}
+              autoPlay
               loop
-              autoplay
               style={styles.lottieAnimation}
             />
           </View>

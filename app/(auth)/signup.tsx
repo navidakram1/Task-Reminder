@@ -208,7 +208,7 @@ export default function SignUpScreen() {
 
       {/* Background Gradient */}
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={['#1F51FF', '#4D6FFF']}
         style={styles.backgroundGradient}
       />
 
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   signUpButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     paddingVertical: 16,
     borderRadius: 12,
     marginTop: 10,
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 16,
-    color: '#667eea',
+    color: '#1F51FF',
     fontWeight: '600',
   },
   termsText: {

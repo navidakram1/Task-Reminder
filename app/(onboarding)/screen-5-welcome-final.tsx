@@ -68,7 +68,7 @@ export default function Screen5WelcomeFinal() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#0EA5E9', '#06B6D4', '#A78BFA']}
+        colors={['#1F51FF', '#4D6FFF', '#7B9FFF']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

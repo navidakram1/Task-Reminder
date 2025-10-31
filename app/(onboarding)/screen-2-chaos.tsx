@@ -70,7 +70,7 @@ export default function Screen2Chaos() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FF6B6B', '#FF8787', '#FFA07A', '#FFB6A3']}
+        colors={['#1F51FF', '#4D6FFF', '#7B9FFF', '#A8C5FF']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

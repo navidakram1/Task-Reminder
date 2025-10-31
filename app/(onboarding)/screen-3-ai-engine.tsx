@@ -47,7 +47,7 @@ export default function Screen3AIEngine() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#8B5CF6', '#7C3AED', '#6D28D9']}
+        colors={['#1F51FF', '#4D6FFF', '#1A3FCC']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

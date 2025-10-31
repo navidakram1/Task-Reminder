@@ -231,12 +231,12 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   forgotPasswordText: {
-    color: '#667eea',
+    color: '#1F51FF',
     fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 30,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 16,
-    color: '#667eea',
+    color: '#1F51FF',
     fontWeight: '600',
   },
 })

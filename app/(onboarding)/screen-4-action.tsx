@@ -47,7 +47,7 @@ export default function Screen4Action() {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#06B6D4', '#14B8A6', '#10B981']}
+        colors={['#1F51FF', '#4D6FFF', '#7B9FFF']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

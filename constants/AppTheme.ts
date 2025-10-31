@@ -4,48 +4,48 @@ import { Platform } from 'react-native'
 export const APP_THEME = {
   // Color Palette
   colors: {
-    // Primary Colors
-    primary: '#FF6B6B', // Coral/Salmon red
-    primaryLight: '#FF8787',
-    primaryDark: '#E85555',
-    
+    // Primary Colors - New Blue Theme
+    primary: '#1F51FF', // Vibrant Blue
+    primaryLight: '#4D6FFF',
+    primaryDark: '#1A3FCC',
+
     // Secondary Colors
-    secondary: '#4ECDC4', // Turquoise
-    secondaryLight: '#6FD9D1',
-    secondaryDark: '#3BB8AF',
-    
+    secondary: '#FF8C42', // Warm Orange (accent)
+    secondaryLight: '#FFB380',
+    secondaryDark: '#E67E2E',
+
     // Neutral Colors
     background: '#F8F9FA', // Light gray background
     surface: '#FFFFFF', // White cards/surfaces
     surfaceHover: '#F5F5F5',
-    
+
     // Text Colors
     textPrimary: '#1A1A1A', // Almost black
     textSecondary: '#6B7280', // Gray
     textTertiary: '#9CA3AF', // Light gray
     textInverse: '#FFFFFF',
-    
+
     // Border Colors
     border: '#E5E7EB', // Light gray border
     borderLight: '#F3F4F6',
     borderDark: '#D1D5DB',
-    
+
     // Status Colors
     success: '#10B981', // Green
     warning: '#F59E0B', // Orange
     error: '#EF4444', // Red
-    info: '#3B82F6', // Blue
-    
+    info: '#1F51FF', // Blue (updated to match primary)
+
     // Accent Colors
-    accent1: '#8B5CF6', // Purple
-    accent2: '#EC4899', // Pink
+    accent1: '#1F51FF', // Primary Blue
+    accent2: '#FF8C42', // Orange
     accent3: '#F59E0B', // Amber
     accent4: '#06B6D4', // Cyan
-    
+
     // Overlay
     overlay: 'rgba(0, 0, 0, 0.5)',
     overlayLight: 'rgba(0, 0, 0, 0.3)',
-    
+
     // Shadows
     shadowColor: '#000000',
   },
@@ -240,7 +240,7 @@ export const APP_THEME = {
     toggle: {
       trackColor: {
         false: '#E5E7EB',
-        true: '#FF6B6B',
+        true: '#1F51FF',
       },
       thumbColor: '#FFFFFF',
     },

@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     }),
   },
   resetButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     paddingVertical: 16,
     borderRadius: 12,
     marginBottom: 30,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 16,
-    color: '#667eea',
+    color: '#1F51FF',
     fontWeight: '600',
   },
   successContainer: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   backButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   resendButtonText: {
-    color: '#667eea',
+    color: '#1F51FF',
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',

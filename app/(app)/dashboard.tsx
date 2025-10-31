@@ -1116,7 +1116,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#667eea',
+    borderColor: '#1F51FF',
     overflow: 'hidden',
   },
   profileIcon: {
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1488,7 +1488,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   createButton: {
-    backgroundColor: '#667eea',
+    backgroundColor: '#1F51FF',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -2415,16 +2415,16 @@ const styles = StyleSheet.create({
 
   // Quick Action Cards with Colors
   quickActionCardPrimary: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
+    backgroundColor: '#1F51FF',
+    borderColor: '#1F51FF',
   },
   quickActionCardSecondary: {
-    backgroundColor: '#4ECDC4',
-    borderColor: '#4ECDC4',
+    backgroundColor: '#FF8C42',
+    borderColor: '#FF8C42',
   },
   quickActionCardTertiary: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: '#4D6FFF',
+    borderColor: '#4D6FFF',
   },
   quickActionCardQuaternary: {
     backgroundColor: '#10B981',

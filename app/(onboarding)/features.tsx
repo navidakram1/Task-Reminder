@@ -108,7 +108,7 @@ export default function FeaturesScreen() {
   }
 
   const handleSkip = () => {
-    router.replace('/(auth)/landing')
+    router.replace('/(auth)/login')
   }
 
   return (
